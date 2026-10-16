@@ -2,6 +2,7 @@ package com.wehavephones.mobile;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
@@ -10,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -25,17 +27,21 @@ import com.wehavephones.MainActivity;
 import com.wehavephones.XServerDisplayActivity;
 import com.wehavephones.container.Container;
 import com.wehavephones.container.ContainerManager;
+import com.wehavephones.contentdialog.ContentDialog;
+import com.wehavephones.core.AppUtils;
 import com.wehavephones.mobile.updates.AppUpdates;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /** Persistent container and runtime controls; installation is a separate first-run screen. */
 public class SetupFragment extends Fragment {
     private WeHavePhonesActivity activity;
     private Spinner containerSpinner, profileSpinner;
     private TextView profileDescription;
-    private View importButton, cancelImportButton, manageContainers;
+    private View importButton, importClientButton, cancelImportButton, manageContainers;
     private TextView importStatus;
     private ProgressBar importProgress;
     private boolean hasContainers;
@@ -90,6 +96,8 @@ public class SetupFragment extends Fragment {
             WowImportService.start(activity.getApplicationContext(), WeHavePhonesContainers.resolve(activity));
             if (getView() != null) renderImport();
         }));
+        importClientButton = view.findViewById(R.id.BTImportClient);
+        importClientButton.setOnClickListener(v -> activity.withStoragePermissions(this::pickClientToImport));
         cancelImportButton.setOnClickListener(v -> {
             WowImportService.cancel();
             cancelImportButton.setEnabled(false);
@@ -147,9 +155,46 @@ public class SetupFragment extends Fragment {
         super.onDestroyView();
     }
 
+    /**
+     * Lists the folders in Downloads that hold a Wow*.exe at their top level
+     * and imports the chosen one into C:\WoW Clients (no Battle.net needed).
+     */
+    private void pickClientToImport() {
+        if (!isAdded() || getView() == null) return;
+        if (WowImportService.isRunning()) {
+            Toast.makeText(activity, R.string.wehavephones_import_wait, Toast.LENGTH_LONG).show();
+            return;
+        }
+        final List<File> folders = CustomClients.candidates(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+        if (folders.isEmpty()) {
+            ContentDialog.alert(activity, R.string.wehavephones_client_import_none, null);
+            return;
+        }
+        ArrayList<String> names = new ArrayList<>();
+        for (File folder : folders) names.add(folder.getName());
+        final ContentDialog dialog = new ContentDialog(activity);
+        dialog.setTitle(R.string.wehavephones_client_import_title);
+        dialog.setMessage(getString(R.string.wehavephones_client_import_pick));
+        ListView list = dialog.findViewById(R.id.ListView);
+        list.getLayoutParams().width = AppUtils.getPreferredDialogWidth(activity);
+        list.setAdapter(new ArrayAdapter<>(activity, R.layout.wehavephones_spinner_dropdown_item, names));
+        list.setVisibility(View.VISIBLE);
+        list.setOnItemClickListener((parent, row, position, id) -> {
+            dialog.dismiss();
+            if (position < 0 || position >= folders.size()) return;
+            WowImportService.startClient(activity.getApplicationContext(), WeHavePhonesContainers.resolve(activity),
+                    folders.get(position));
+            if (isAdded() && getView() != null) renderImport();
+        });
+        dialog.findViewById(R.id.BTConfirm).setVisibility(View.GONE);
+        dialog.show();
+    }
+
     private void renderImport() {
         WowImportService.State state = WowImportService.state();
         importButton.setEnabled(hasContainers && !state.running);
+        importClientButton.setEnabled(hasContainers && !state.running);
         manageContainers.setEnabled(!state.running);
         containerSpinner.setEnabled(hasContainers && !state.running);
         cancelImportButton.setVisibility(state.running ? View.VISIBLE : View.GONE);

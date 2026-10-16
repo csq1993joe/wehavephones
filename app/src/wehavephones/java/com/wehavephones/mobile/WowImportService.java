@@ -27,6 +27,8 @@ public final class WowImportService extends Service {
     private static final String CHANNEL = "wow-import";
     private static final int NOTIFICATION = 16;
     private static final String CANCEL = "cancel";
+    /** Absolute path of a client folder in Downloads; absent for the Battle.net "World of Warcraft" import. */
+    private static final String EXTRA_CLIENT_SOURCE = "client_source";
     private static volatile boolean cancelRequested;
     private static volatile State state = new State(false, false, 0, 0, "");
 
@@ -58,6 +60,20 @@ public final class WowImportService extends Service {
     }
 
     public static synchronized void start(Context context, Container container) {
+        start(context, container, null);
+    }
+
+    /**
+     * Imports a client that runs without Battle.net from {@code clientSource}
+     * (a folder in Downloads with Wow*.exe at its top level) into
+     * C:\WoW Clients of {@code container}.
+     */
+    public static synchronized void startClient(Context context, Container container, File clientSource) {
+        if (clientSource == null) return;
+        start(context, container, clientSource);
+    }
+
+    private static synchronized void start(Context context, Container container, File clientSource) {
         if (isRunning()) return;
         if (container == null || !WeHavePhonesPaths.driveC(container).isDirectory()) {
             state = new State(false, true, 0, 0, context.getString(R.string.wehavephones_import_needs_container));
@@ -70,7 +86,9 @@ public final class WowImportService extends Service {
         cancelRequested = false;
         state = new State(true, false, 0, 0, context.getString(R.string.wehavephones_import_checking));
         try {
-            context.startForegroundService(new Intent(context, WowImportService.class).putExtra("container_id", container.id));
+            Intent intent = new Intent(context, WowImportService.class).putExtra("container_id", container.id);
+            if (clientSource != null) intent.putExtra(EXTRA_CLIENT_SOURCE, clientSource.getAbsolutePath());
+            context.startForegroundService(intent);
         }
         catch (RuntimeException failure) {
             Log.w("WowImport", "Could not start import", failure);
@@ -96,13 +114,15 @@ public final class WowImportService extends Service {
         wakeLock.setReferenceCounted(false);
         wakeLock.acquire();
         int containerId = intent.getIntExtra("container_id", 0);
-        worker = new Thread(() -> runImport(containerId), "wow-import");
+        String clientSource = intent.getStringExtra(EXTRA_CLIENT_SOURCE);
+        worker = new Thread(() -> runImport(containerId, clientSource), "wow-import");
         worker.start();
         return START_NOT_STICKY;
     }
 
-    private void runImport(int containerId) {
+    private void runImport(int containerId, String clientSource) {
         State result;
+        boolean client = clientSource != null && !clientSource.isEmpty();
         try {
             Container container = new ContainerManager(this).getContainerById(containerId);
             if (container == null || !WeHavePhonesPaths.driveC(container).isDirectory()) {
@@ -110,6 +130,9 @@ public final class WowImportService extends Service {
             }
             else if (hasLiveSession()) {
                 result = new State(false, true, 0, 0, getString(R.string.wehavephones_import_close_session));
+            }
+            else if (client) {
+                result = importClient(container, new File(clientSource));
             }
             else {
                 File source = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
@@ -123,10 +146,10 @@ public final class WowImportService extends Service {
         catch (WowFileImporter.ImportException failure) {
             int message;
             switch (failure.problem) {
-                case MISSING_SOURCE: message = R.string.wehavephones_import_missing; break;
-                case INVALID_SOURCE: message = R.string.wehavephones_import_invalid; break;
-                case ALREADY_INSTALLED: message = R.string.wehavephones_import_existing; break;
-                case SOURCE_CHANGED: message = R.string.wehavephones_import_source_changed; break;
+                case MISSING_SOURCE: message = client ? R.string.wehavephones_client_import_missing : R.string.wehavephones_import_missing; break;
+                case INVALID_SOURCE: message = client ? R.string.wehavephones_client_import_invalid : R.string.wehavephones_import_invalid; break;
+                case ALREADY_INSTALLED: message = client ? R.string.wehavephones_client_import_existing : R.string.wehavephones_import_existing; break;
+                case SOURCE_CHANGED: message = client ? R.string.wehavephones_client_import_source_changed : R.string.wehavephones_import_source_changed; break;
                 case CANCELLED: message = R.string.wehavephones_import_cancelled; break;
                 case NOT_ENOUGH_SPACE: message = R.string.wehavephones_import_no_space; break;
                 default: message = R.string.wehavephones_import_copy_failed;
@@ -150,6 +173,22 @@ public final class WowImportService extends Service {
             stopSelf();
             state = finished;
         });
+    }
+
+    /**
+     * Copies one client folder to C:\WoW Clients\<safe name>, records its
+     * name and build in the marker before it is published, and selects it
+     * on Play.
+     */
+    private State importClient(Container container, File source) throws WowFileImporter.ImportException {
+        File root = WeHavePhonesPaths.customClientsRoot(container);
+        File destination = new File(root, CustomClients.folderNameFor(source.getName(), root));
+        String name = source.getName();
+        WowFileImporter.copyClient(source, destination, this::progress, () -> cancelRequested,
+                staging -> CustomClients.writeMarker(staging, name, source.getName()));
+        WeHavePhonesConfig.setProductDir(this, destination.getName());
+        return new State(false, false, state.total, state.total,
+                getString(R.string.wehavephones_client_import_done, name, CustomClients.GUEST_ROOT + "\\" + destination.getName()));
     }
 
     private void progress(long copied, long total) {

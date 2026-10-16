@@ -150,6 +150,12 @@
                     android:layout_marginTop="8dp"
                     android:enabled="false"
                     android:text="@string/wehavephones_first_run_bnet_install" />
+                <Button
+                    android:id="@+id/BTSkipBnet"
+                    style="@style/WeHavePhonesButtonOutline"
+                    android:layout_marginTop="8dp"
+                    android:enabled="false"
+                    android:text="@string/wehavephones_first_run_skip_bnet" />
             </LinearLayout>
         </LinearLayout>
         <ProgressBar

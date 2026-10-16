@@ -59,11 +59,18 @@ public final class BattleNetGames {
         }
 
         public String getTitle() {
+            if (isCustom()) return product.getTitle();
             return WowFlavor.gameTitle(flavor, directoryName.isEmpty() ? getDisplayName() : directoryName);
         }
 
         public String getEdition() {
+            if (isCustom()) return product.getEdition();
             return WowFlavor.edition(flavor, version);
+        }
+
+        /** A client imported without Battle.net: Play starts it directly and it has a realmlist. */
+        public boolean isCustom() {
+            return product != null && product.isCustom();
         }
 
         boolean matches(String dir, String code, String id) {

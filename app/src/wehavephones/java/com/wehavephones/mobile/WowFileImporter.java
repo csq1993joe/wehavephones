@@ -19,6 +19,8 @@ import java.util.function.LongSupplier;
 public final class WowFileImporter {
     public static final String FOLDER_NAME = "World of Warcraft";
     static final String STAGING_NAME = ".wehavephones-wow-import";
+    /** Same as CustomClients.STAGING_NAME; kept here so the importer stays self-contained. */
+    static final String CLIENT_STAGING_NAME = ".wehavephones-client-import";
     static final long SPACE_RESERVE = 256L * 1024 * 1024;
 
     public enum Problem { MISSING_SOURCE, INVALID_SOURCE, ALREADY_INSTALLED, NOT_ENOUGH_SPACE,
@@ -32,6 +34,11 @@ public final class WowFileImporter {
     }
 
     public interface Progress { void onProgress(long copiedBytes, long totalBytes); }
+
+    /** Runs on the complete staged copy, before it is published under its final name. */
+    public interface StagingHook { void prepare(File staging) throws IOException; }
+
+    private interface Validator { void validate(File source) throws ImportException; }
 
     private static final class Entry {
         final File source;
@@ -59,13 +66,37 @@ public final class WowFileImporter {
     // Injectable available space keeps low-storage failures testable without filling a disk.
     static void copy(File source, File destination, File alternateDestination,
             Progress progress, BooleanSupplier cancelled, LongSupplier availableSpace) throws ImportException {
-        File staging = new File(destination.getParentFile(), STAGING_NAME);
+        copyTree(source, destination, alternateDestination, new File(destination.getParentFile(), STAGING_NAME),
+                WowFileImporter::validateInstallation, null, progress, cancelled, availableSpace);
+    }
+
+    /**
+     * Copies a client that runs without Battle.net (any WoW version with its
+     * Wow*.exe at the top level) to {@code destination}, a new folder under
+     * C:\WoW Clients. {@code beforePublish} can add files (the marker) to
+     * the complete copy before it becomes visible.
+     */
+    public static void copyClient(File source, File destination, Progress progress, BooleanSupplier cancelled,
+            StagingHook beforePublish) throws ImportException {
+        copyClient(source, destination, progress, cancelled, beforePublish,
+                () -> destination.getParentFile().getUsableSpace());
+    }
+
+    static void copyClient(File source, File destination, Progress progress, BooleanSupplier cancelled,
+            StagingHook beforePublish, LongSupplier availableSpace) throws ImportException {
+        copyTree(source, destination, null, new File(destination.getParentFile(), CLIENT_STAGING_NAME),
+                WowFileImporter::validateClient, beforePublish, progress, cancelled, availableSpace);
+    }
+
+    private static void copyTree(File source, File destination, File alternateDestination, File staging,
+            Validator validator, StagingHook beforePublish, Progress progress, BooleanSupplier cancelled,
+            LongSupplier availableSpace) throws ImportException {
         boolean ownsStaging = false;
         try {
             checkCancelled(cancelled);
             checkDestination(destination, alternateDestination);
             if (!source.isDirectory()) throw new ImportException(Problem.MISSING_SOURCE);
-            validateInstallation(source);
+            validator.validate(source);
             ArrayList<Entry> entries = new ArrayList<>();
             long total = scan(source, "", entries, cancelled);
             if (total == 0) throw new ImportException(Problem.INVALID_SOURCE);
@@ -119,6 +150,8 @@ public final class WowFileImporter {
                 }
             }
             checkCancelled(cancelled);
+            if (beforePublish != null) beforePublish.prepare(staging);
+            checkCancelled(cancelled);
             checkDestination(destination, alternateDestination);
             // Same filesystem; no REPLACE_EXISTING. The scanner sees the folder only when complete.
             Files.move(staging.toPath(), destination.toPath());
@@ -159,6 +192,15 @@ public final class WowFileImporter {
             }
         }
         throw new ImportException(Problem.INVALID_SOURCE);
+    }
+
+    /** A client folder needs only its game executable at the top level (no .build.info, any version). */
+    private static void validateClient(File source) throws ImportException {
+        String[] names = source.list();
+        if (Files.isSymbolicLink(source.toPath()) || names == null
+                || WowFlavor.pickClientExecutable(Arrays.asList(names)).isEmpty()) {
+            throw new ImportException(Problem.INVALID_SOURCE);
+        }
     }
 
     private static long scan(File file, String relative, ArrayList<Entry> entries,

@@ -25,6 +25,26 @@
     <string name="wehavephones_import_no_space">Import needs %1$s of free space and %2$s is available. Free some space and try again.</string>
     <string name="wehavephones_import_copy_failed">Could not finish importing. Check storage access and free space, then try again. Your files in Downloads are unchanged.</string>
     <string name="wehavephones_import_wait">Wait for the WoW import to finish, or cancel it in Setup.</string>
+    <!-- Clients that run without Battle.net (C:\WoW Clients) -->
+    <string name="wehavephones_client_import_title">Import your own client</string>
+    <string name="wehavephones_client_import_hint">Or play a client that runs without Battle.net, such as 3.3.5a: copy its folder, with Wow.exe directly inside, to Downloads and import it here. Set its server with Realmlist on Play.</string>
+    <string name="wehavephones_client_import_pick">Folders in Downloads with a Wow*.exe. The copy goes to C:\\WoW Clients and your files in Downloads stay as they are.</string>
+    <string name="wehavephones_client_import_none">No client folder found in Downloads. Copy the client folder, the one with Wow.exe directly inside, to the phone\'s Download folder and try again.</string>
+    <string name="wehavephones_client_import_done">%1$s is imported into %2$s and selected on Play. Set its server with Realmlist, then press Play.</string>
+    <string name="wehavephones_client_import_missing">That folder is no longer in Downloads.</string>
+    <string name="wehavephones_client_import_invalid">That folder has no Wow*.exe at its top level. Pick the folder that contains Wow.exe.</string>
+    <string name="wehavephones_client_import_existing">A client folder with that name appeared during the import. Try again.</string>
+    <string name="wehavephones_client_import_source_changed">The files changed while they were copied. Finish copying the folder to Downloads, then try again.</string>
+    <string name="wehavephones_client_launching">Starting %1$s…</string>
+    <string name="wehavephones_client_missing">%1$s is no longer in C:\\WoW Clients. Import it again in Setup.</string>
+    <string name="wehavephones_client_session_running">A game session is already running. Exit it from the side menu to start another game.</string>
+    <string name="wehavephones_realmlist">Realmlist</string>
+    <string name="wehavephones_realmlist_title">Realmlist</string>
+    <string name="wehavephones_realmlist_message">Server for %1$s, as in set realmlist: a host name or IP address, with :port if the server needs one.</string>
+    <string name="wehavephones_realmlist_hint">logon.example.com</string>
+    <string name="wehavephones_realmlist_invalid">Enter a host name or IP address, such as logon.example.com or 127.0.0.1:3724.</string>
+    <string name="wehavephones_realmlist_saved">%1$s now connects to %2$s.</string>
+    <string name="wehavephones_realmlist_failed">Could not save the realmlist: %1$s</string>
     <string name="wehavephones_addons">Add-ons</string>
     <string name="wehavephones_settings">Settings</string>
 
@@ -45,8 +65,10 @@
     <string name="wehavephones_missing_system">System files aren\'t installed yet.</string>
     <string name="wehavephones_missing_container">The game container isn\'t set up yet.</string>
     <string name="wehavephones_missing_bnet">Battle.net isn\'t installed yet.</string>
+    <string name="wehavephones_missing_bnet_or_client">No game yet. Import your own client in Setup, or install Battle.net.</string>
 
     <string name="wehavephones_home_plan_battlenet">Play opens Battle.net for sign-in and patches, then enters the game.</string>
+    <string name="wehavephones_home_plan_custom">Play starts the client directly, without Battle.net.</string>
     <string name="wehavephones_stage_idle">Ready.</string>
 
     <string name="wehavephones_first_run_label">FIRST-TIME SETUP</string>
@@ -62,6 +84,7 @@
     <string name="wehavephones_first_run_bnet_install">Install Battle.net</string>
     <string name="wehavephones_first_run_bnet_locked">Install your container first.</string>
     <string name="wehavephones_first_run_bnet_hint">Complete the installation in the Battle.net window.</string>
+    <string name="wehavephones_first_run_skip_bnet">Skip: I\'ll import my own client</string>
     <string name="wehavephones_first_run_status">Two steps, then you\'re ready to choose your game.</string>
     <string name="wehavephones_first_run_region_later">Region can be changed later in Settings. China uses its own Battle.net app, so switching to or from it needs a new container (Setup).</string>
     <string name="wehavephones_new_container_label">NEW CONTAINER</string>

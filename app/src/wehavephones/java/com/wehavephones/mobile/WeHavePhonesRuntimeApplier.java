@@ -113,21 +113,36 @@ public final class WeHavePhonesRuntimeApplier {
         }
         if (stage != Stage.BATTLE_NET) {
             WowProduct product = resolveProduct(context, container, result);
-            if (product != null) {
+            if (product != null && product.isCustom()) {
+                // Imported without Battle.net (any version): none of the retail first-boot
+                // CVars (portal, GxApi D3D12) apply, and wow.bat starts its own executable.
                 try {
-                    if (WowFirstBoot.prepare(product.directory, WeHavePhonesConfig.getGameRegion(context),
-                            product.getFlavor() == WowFlavor.RETAIL,
-                            WeHavePhonesConfig.getGameScreenSize(context), WeHavePhonesConfig.isGameRegionOverride(context),
-                            DeviceProfileSelector.wowApiArg(context))) result.step("WoW first-boot settings prepared");
+                    if (CustomClients.prepareConfig(product.directory, WeHavePhonesConfig.getGameScreenSize(context))) {
+                        result.step("Display settings prepared for " + product.getDisplayName());
+                    }
                 }
                 catch (java.io.IOException e) {
-                    result.fail("Could not prepare WoW first boot: " + e.getMessage());
+                    result.fail("Could not prepare " + product.getDisplayName() + ": " + e.getMessage());
                 }
+                writeBat(WeHavePhonesPaths.wowBat(container), CustomClients.launchBat(product).getBytes(StandardCharsets.UTF_8), "wow.bat", result);
             }
-            String productDir = product != null ? product.directoryName : WeHavePhonesRuntimeProfiles.DEFAULT_PRODUCT_DIR;
-            String executable = product != null && !product.getExecutable().isEmpty()
-                    ? product.getExecutable() : WeHavePhonesRuntimeProfiles.DEFAULT_WOW_EXECUTABLE;
-            writeBat(WeHavePhonesPaths.wowBat(container), profiles.buildWowBat(productDir, executable, DeviceProfileSelector.wowApiArg(context)).getBytes(StandardCharsets.UTF_8), "wow.bat", result);
+            else {
+                if (product != null) {
+                    try {
+                        if (WowFirstBoot.prepare(product.directory, WeHavePhonesConfig.getGameRegion(context),
+                                product.getFlavor() == WowFlavor.RETAIL,
+                                WeHavePhonesConfig.getGameScreenSize(context), WeHavePhonesConfig.isGameRegionOverride(context),
+                                DeviceProfileSelector.wowApiArg(context))) result.step("WoW first-boot settings prepared");
+                    }
+                    catch (java.io.IOException e) {
+                        result.fail("Could not prepare WoW first boot: " + e.getMessage());
+                    }
+                }
+                String productDir = product != null ? product.directoryName : WeHavePhonesRuntimeProfiles.DEFAULT_PRODUCT_DIR;
+                String executable = product != null && !product.getExecutable().isEmpty()
+                        ? product.getExecutable() : WeHavePhonesRuntimeProfiles.DEFAULT_WOW_EXECUTABLE;
+                writeBat(WeHavePhonesPaths.wowBat(container), profiles.buildWowBat(productDir, executable, DeviceProfileSelector.wowApiArg(context)).getBytes(StandardCharsets.UTF_8), "wow.bat", result);
+            }
         }
 
         deployArtifacts(context, container, profile, "ntdll", profile.ntdll, true, result);

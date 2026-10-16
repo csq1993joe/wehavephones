@@ -177,6 +177,11 @@ public final class ConsolePortUpdater {
         ArrayList<WowProduct> targets = new ArrayList<>();
         for (WowProduct product : WowInstallationScanner.scan(container)) {
             if (product.directory == null) continue;
+            // ConsolePort targets current clients; it would only raise Lua errors in an older custom client.
+            if (product.isCustom()) {
+                report.skipped++;
+                continue;
+            }
             if (ConsolePort.requiredFor(product.getFlavor())) targets.add(product);
             else report.skipped++;
         }

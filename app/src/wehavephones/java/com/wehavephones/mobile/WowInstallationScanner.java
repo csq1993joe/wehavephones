@@ -15,7 +15,14 @@ import java.util.Map;
 public final class WowInstallationScanner {
     private WowInstallationScanner() {}
 
+    /** Battle.net games in catalog order, then the clients imported without Battle.net. */
     public static ArrayList<WowProduct> scan(Container container) {
+        ArrayList<WowProduct> products = scanBattleNet(container);
+        if (container != null) products.addAll(CustomClients.scan(WeHavePhonesPaths.customClientsRoot(container)));
+        return products;
+    }
+
+    private static ArrayList<WowProduct> scanBattleNet(Container container) {
         ArrayList<WowProduct> products = new ArrayList<>();
         if (container == null) return products;
         File root = WeHavePhonesPaths.wowRootFor(container);
