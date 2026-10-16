@@ -2,7 +2,11 @@ package com.wehavephones.mobile;
 
 import java.io.File;
 
-/** One installed WoW game (a {@code World of Warcraft\_<product>_} directory). */
+/**
+ * One installed WoW game: a Battle.net {@code World of Warcraft\_<product>_}
+ * directory, or a client imported without Battle.net under
+ * {@code C:\WoW Clients\<folder>} ({@link #isCustom()}).
+ */
 public final class WowProduct {
     public final String directoryName;
     public final File directory;
@@ -12,10 +16,42 @@ public final class WowProduct {
     private String branch = "";
     private String buildKey = "";
     private String executable = "";
+    private boolean custom;
+    private String customName = "";
+    private String realmlist = "";
+    private String launchArguments = "";
 
     WowProduct(String directoryName, File directory) {
         this.directoryName = directoryName;
         this.directory = directory;
+    }
+
+    /** A client imported without Battle.net: Play starts its executable directly. */
+    public boolean isCustom() {
+        return custom;
+    }
+
+    void setCustom(String name) {
+        custom = true;
+        customName = name != null ? name.trim() : "";
+    }
+
+    /** Server address from the client's realmlist.wtf or Config.wtf; empty when none is set. */
+    public String getRealmlist() {
+        return realmlist;
+    }
+
+    void setRealmlist(String realmlist) {
+        this.realmlist = realmlist != null ? realmlist : "";
+    }
+
+    /** Extra command-line arguments for a custom client, from its marker file; usually empty. */
+    public String getLaunchArguments() {
+        return launchArguments;
+    }
+
+    void setLaunchArguments(String arguments) {
+        launchArguments = arguments != null ? arguments.trim() : "";
     }
 
     public WowFlavor getFlavor() {
@@ -26,18 +62,28 @@ public final class WowProduct {
         this.flavor = flavor != null ? flavor : WowFlavor.UNKNOWN;
     }
 
-    /** Short catalog name, e.g. "MoP Classic" or "Forever Beta". */
+    /** Short catalog name, e.g. "MoP Classic" or "Forever Beta"; a custom client's own name. */
     public String getDisplayName() {
+        if (custom) return !customName.isEmpty() ? customName : directoryName;
         return flavor.isKnown() ? flavor.displayName : WowFlavor.prettyDirectory(directoryName);
     }
 
-    /** Big title, e.g. "World of Warcraft: Forever". */
+    /** Big title, e.g. "World of Warcraft: Forever"; a custom client's own name. */
     public String getTitle() {
+        if (custom) return getDisplayName();
         return WowFlavor.gameTitle(flavor, directoryName);
     }
 
-    /** Expansion and channel, e.g. "Mists of Pandaria · PTR"; may be empty. */
+    /**
+     * Expansion and channel, e.g. "Mists of Pandaria · PTR"; may be empty.
+     * For a custom client: the expansion of its build and its realmlist.
+     */
     public String getEdition() {
+        if (custom) {
+            String era = WowFlavor.eraForVersion(version);
+            if (realmlist.isEmpty()) return era;
+            return era.isEmpty() ? realmlist : era + " · " + realmlist;
+        }
         return WowFlavor.edition(flavor, version);
     }
 

@@ -70,6 +70,57 @@ public final class WeHavePhonesPlayController {
     }
 
     /**
+     * Play for a client imported without Battle.net: apply the runtime (the
+     * applier writes the display CVars and a wow.bat that starts the client's
+     * own executable), then open the session on the WoW shortcut. There is no
+     * Battle.net sign-in or update check; the server comes from the client's
+     * realmlist. A running session is brought to the front instead.
+     */
+    public static void playCustom(final WeHavePhonesActivity activity, final WowProduct product) {
+        if (blockDuringImport(activity)) return;
+        if (product == null || !product.isCustom()) return;
+        if (RuntimeStageController.isRunning() || OneButtonLauncher.isRunning()) {
+            activity.updateStageStatus(activity.getString(R.string.wehavephones_launch_in_progress), false);
+            return;
+        }
+        XServerDisplayActivity live = XServerDisplayActivity.getActiveInstance();
+        if (live != null && live.isSessionActive()) {
+            Container container = WeHavePhonesContainers.resolve(activity);
+            if (container != null) WeHavePhonesSessionLauncher.launch(activity, container, null);
+            activity.updateStageStatus(activity.getString(R.string.wehavephones_client_session_running), false);
+            return;
+        }
+        // The applier writes wow.bat for the selected game.
+        WeHavePhonesConfig.setProductDir(activity, product.directoryName);
+        activity.updateStageStatus(activity.getString(R.string.wehavephones_stage_preparing), false);
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            final android.content.Context context = activity.getApplicationContext();
+            final WeHavePhonesRuntimeApplier.Result result = WeHavePhonesRuntimeApplier.apply(context, WeHavePhonesRuntimeApplier.Stage.SINGLE);
+            if (!result.success) {
+                final String message = activity.getString(R.string.wehavephones_stage_apply_failed) + ": " + result.errors;
+                activity.runOnUiThread(() -> activity.updateStageStatus(message, true));
+                return;
+            }
+            WowProduct selected = WowInstallationScanner.selected(context, result.container);
+            if (selected == null || !selected.isCustom() || !selected.directoryName.equals(product.directoryName)) {
+                activity.runOnUiThread(() -> activity.updateStageStatus(
+                        activity.getString(R.string.wehavephones_client_missing, product.getDisplayName()), true));
+                return;
+            }
+            final File shortcut = WeHavePhonesShortcuts.ensureWowShortcut(result.container);
+            activity.runOnUiThread(() -> {
+                if (shortcut != null && WeHavePhonesSessionLauncher.launch(activity, result.container, shortcut)) {
+                    activity.updateStageStatus(activity.getString(R.string.wehavephones_client_launching, product.getDisplayName()), false);
+                }
+                else {
+                    activity.updateStageStatus(activity.getString(R.string.wehavephones_stage_launch_failed), true);
+                }
+            });
+        });
+    }
+
+    /**
      * Ask Battle.net to install a game it lists but that is not on disk
      * ({@code Battle.net.exe --game=<id> --install}). A running client gets the
      * request forwarded in-session; otherwise the verified runtime is applied

@@ -152,6 +152,7 @@ public final class GlueControllerBridge {
         }
         for (WowProduct product : WowInstallationScanner.scan(container)) {
             if (product.directory == null || !product.directoryName.equalsIgnoreCase(name)) continue;
+            if (product.isCustom()) return null;
             return ConsolePort.requiredFor(product.getFlavor()) ? product.directory : null;
         }
         return null;

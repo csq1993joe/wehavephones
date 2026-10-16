@@ -10,15 +10,19 @@ import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListPopupWindow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.wehavephones.R;
+import com.wehavephones.contentdialog.ContentDialog;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,7 +42,8 @@ public class HomeFragment extends Fragment {
     private View playButton;
     private TextView playLabel;
     private ImageView playIcon;
-    private View openBattleNet;
+    /** Open Battle.net, or Realmlist when the selected game is a client imported without Battle.net. */
+    private TextView openBattleNet;
     private View setupDetails;
     private DriverPicker driverPicker;
     private BattleNetGames.Game selectedGame;
@@ -85,6 +90,10 @@ public class HomeFragment extends Fragment {
                 activity.showSection(new SetupFragment());
                 return;
             }
+            if (selectedGame != null && selectedGame.isCustom()) {
+                WeHavePhonesPlayController.playCustom(activity, selectedGame.product);
+                return;
+            }
             if (selectedGame == null) {
                 WeHavePhonesPlayController.openBattleNet(activity, activity::updateStageStatus);
                 return;
@@ -97,8 +106,10 @@ public class HomeFragment extends Fragment {
                     selectedGame.getTitle(), selectedGame.version, GameVersionAdapter.accent(selectedGame), monogram(selectedGame)));
             WeHavePhonesPlayController.play(activity);
         });
-        openBattleNet.setOnClickListener((v) ->
-                WeHavePhonesPlayController.openBattleNet(activity, activity::updateStageStatus));
+        openBattleNet.setOnClickListener((v) -> {
+            if (selectedGame != null && selectedGame.isCustom()) showRealmlistDialog(selectedGame.product);
+            else WeHavePhonesPlayController.openBattleNet(activity, activity::updateStageStatus);
+        });
         gameSwitch.setOnClickListener((v) -> showGameVersions());
         setupDetails.setOnClickListener((v) -> activity.showSection(new DiagnosticsFragment()));
     }
@@ -151,6 +162,7 @@ public class HomeFragment extends Fragment {
     private void renderGame(BattleNetGames.Game game) {
         selectedGame = game;
         renderPlayButton();
+        renderSecondaryButton();
         if (game == null) {
             gameTitle.setText(R.string.wehavephones_game_default_title);
             gameEdition.setText(R.string.wehavephones_game_not_installed);
@@ -215,16 +227,23 @@ public class HomeFragment extends Fragment {
             BattleNetGames.Game game = status.games.get(position);
             WeHavePhonesConfig.setProductDir(requireContext(), game.selectionKey());
             renderGame(game);
+            // Whether Battle.net is needed depends on the game (custom clients do not need it).
+            renderSetupState();
+            renderStageStatus();
         });
         popup.show();
     }
 
-    /** The first missing piece Play needs, as a message, or 0 when setup is complete. */
+    /**
+     * The first missing piece Play needs, as a message, or 0 when setup is
+     * complete. A client imported without Battle.net needs no Battle.net.
+     */
     private int missingSetup() {
         if (status == null) return 0;
         if (!status.imageFsValid) return R.string.wehavephones_missing_system;
         if (!status.containerReady) return R.string.wehavephones_missing_container;
-        if (!status.bnetInstalled) return R.string.wehavephones_missing_bnet;
+        if (selectedGame != null && selectedGame.isCustom()) return 0;
+        if (!status.bnetInstalled) return R.string.wehavephones_missing_bnet_or_client;
         return 0;
     }
 
@@ -241,8 +260,64 @@ public class HomeFragment extends Fragment {
 
     private void renderSetupState() {
         renderPlayButton();
-        openBattleNet.setEnabled(status.bnetInstalled);
+        renderSecondaryButton();
         setupDetails.setVisibility(missingSetup() != 0 ? View.VISIBLE : View.GONE);
+    }
+
+    /** "Realmlist" for a client imported without Battle.net, otherwise "Open Battle.net". */
+    private void renderSecondaryButton() {
+        boolean custom = selectedGame != null && selectedGame.isCustom();
+        openBattleNet.setText(custom ? R.string.wehavephones_realmlist : R.string.wehavephones_open_bnet);
+        openBattleNet.setEnabled(custom || (status != null && status.bnetInstalled));
+    }
+
+    /** Edit the server a custom client connects to (its realmlist.wtf files and Config.wtf). */
+    private void showRealmlistDialog(final WowProduct product) {
+        if (product == null) return;
+        final Context context = requireContext();
+        final ContentDialog dialog = new ContentDialog(context);
+        dialog.setTitle(R.string.wehavephones_realmlist_title);
+        dialog.setMessage(getString(R.string.wehavephones_realmlist_message, product.getDisplayName()));
+        final EditText input = dialog.findViewById(R.id.EditText);
+        input.setVisibility(View.VISIBLE);
+        input.setSingleLine(true);
+        input.setInputType(EditorInfo.TYPE_CLASS_TEXT | EditorInfo.TYPE_TEXT_VARIATION_URI);
+        input.setHint(R.string.wehavephones_realmlist_hint);
+        input.setText(product.getRealmlist());
+        input.setSelection(input.getText().length());
+        dialog.setOnConfirmCallback(() -> saveRealmlist(product, input.getText().toString()));
+        dialog.show();
+    }
+
+    private void saveRealmlist(final WowProduct product, String typed) {
+        final android.app.Activity host = requireActivity();
+        final Context appContext = host.getApplicationContext();
+        final String address = CustomClients.normalizeRealmlist(typed);
+        if (address == null) {
+            Toast.makeText(appContext, R.string.wehavephones_realmlist_invalid, Toast.LENGTH_LONG).show();
+            return;
+        }
+        STATUS_EXECUTOR.execute(() -> {
+            String error = null;
+            try {
+                CustomClients.writeRealmlist(product.directory, address);
+            }
+            catch (java.io.IOException e) {
+                error = e.getMessage();
+            }
+            final String failure = error;
+            host.runOnUiThread(() -> {
+                if (failure == null) {
+                    Toast.makeText(appContext, appContext.getString(R.string.wehavephones_realmlist_saved,
+                            product.getDisplayName(), address), Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    Toast.makeText(appContext, appContext.getString(R.string.wehavephones_realmlist_failed, failure),
+                            Toast.LENGTH_LONG).show();
+                }
+                if (isAdded()) refresh();
+            });
+        });
     }
 
     /** "<stage>. <what Play will do>", or the error alone in red. */
@@ -269,7 +344,8 @@ public class HomeFragment extends Fragment {
         }
         else {
             text.setSpan(new ForegroundColorSpan(context.getColor(R.color.wehavephones_text)), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            text.append(' ').append(getString(R.string.wehavephones_home_plan_battlenet));
+            text.append(' ').append(getString(selectedGame != null && selectedGame.isCustom()
+                    ? R.string.wehavephones_home_plan_custom : R.string.wehavephones_home_plan_battlenet));
         }
         stageStatus.setText(text);
     }

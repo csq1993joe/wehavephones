@@ -148,6 +148,19 @@
                     android:layout_width="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="@string/wehavephones_import_title" />
+                <TextView
+                    style="@style/WeHavePhonesHint"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/wehavephones_client_import_hint"
+                    android:textSize="13sp" />
+                <Button
+                    android:id="@+id/BTImportClient"
+                    style="@style/WeHavePhonesButtonOutline"
+                    android:layout_width="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"
+                    android:text="@string/wehavephones_client_import_title" />
                 <ProgressBar
                     android:id="@+id/PBImportWow"
                     style="?android:attr/progressBarStyleHorizontal"

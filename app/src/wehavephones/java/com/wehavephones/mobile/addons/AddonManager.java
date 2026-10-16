@@ -167,7 +167,10 @@ public final class AddonManager {
             return cachedProducts;
         }
         Container container = WeHavePhonesContainers.resolve(context);
-        cachedProducts = container != null ? WowInstallationScanner.scan(container) : new ArrayList<WowProduct>();
+        ArrayList<WowProduct> scanned = container != null ? WowInstallationScanner.scan(container) : new ArrayList<WowProduct>();
+        // The addon catalogs serve current Battle.net clients; custom clients keep their own AddOns folder.
+        scanned.removeIf(WowProduct::isCustom);
+        cachedProducts = scanned;
         productsLoadedAt = now;
         return cachedProducts;
     }

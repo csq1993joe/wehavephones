@@ -17,6 +17,9 @@
 #      pre-game controller bridge and the return to the menu when WoW closes.
 #   1i. Java (InputBridgeCompanionSelfTest): guest path of the user's own
 #      Input Bridge ib.exe through the container drive mappings.
+#   1j. Java (CustomClientsSelfTest): clients imported without Battle.net -
+#      executable choice, safe folder names, realmlist for 1.x/3.x/4.x+
+#      layouts, display CVars, the start batch file, PE versions, the import.
 #   2. Python (tools/wehavephones-launch-selftest/reconnect_selftest.py): the
 #      reconnect/detached-run helper scripts/wehavephones-device.py against a fake
 #      adb shim (backoff, give-up deadline, USB preference, drop + resume, the
@@ -215,6 +218,33 @@ if [[ -n "$JAVAC" && -n "$JAVA" ]]; then
     "$JAVA" -cp "$WORK_DIR" com.wehavephones.mobile.WowFileImporterSelfTest || fail "WowFileImporterSelfTest"
   else
     fail "javac failed for WowFileImporterSelfTest"
+  fi
+  rm -rf "$WORK_DIR"
+fi
+
+echo
+echo "[test-wehavephones-launch] == 1j. clients imported without Battle.net (realmlist, start file, import) =="
+if [[ -n "$JAVAC" && -n "$JAVA" ]]; then
+  rm -rf "$WORK_DIR"
+  mkdir -p "$WORK_DIR"
+  SOURCES=(
+    "$SRC_DIR/CustomClients.java"
+    "$SRC_DIR/WowProduct.java"
+    "$SRC_DIR/WowFlavor.java"
+    "$SRC_DIR/WowClientFiles.java"
+    "$SRC_DIR/MemoryTransforms.java"
+    "$SRC_DIR/WowFileImporter.java"
+    "$SRC_DIR/BattleNetGames.java"
+    "$SRC_DIR/BattleNetProductDb.java"
+    "$SRC_DIR/BattleNetBuildInfo.java"
+    "$SRC_DIR/BattleNetLauncherLog.java"
+    "$SRC_DIR/WeHavePhonesLaunchPlan.java"
+    "$SELF_TEST_DIR/CustomClientsSelfTest.java"
+  )
+  if "$JAVAC" -encoding UTF-8 -d "$WORK_DIR" -cp "${JSON_JAR:-}" "${SOURCES[@]}"; then
+    "$JAVA" -cp "$WORK_DIR:${JSON_JAR:-}" com.wehavephones.mobile.CustomClientsSelfTest || fail "CustomClientsSelfTest"
+  else
+    fail "javac failed for CustomClientsSelfTest"
   fi
   rm -rf "$WORK_DIR"
 fi

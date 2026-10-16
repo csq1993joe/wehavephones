@@ -58,6 +58,11 @@ public final class WeHavePhonesPaths {
         return primary.isDirectory() ? primary : wowRootFallback(container);
     }
 
+    /** C:\WoW Clients: clients imported without Battle.net, one folder each (see {@link CustomClients}). */
+    public static File customClientsRoot(Container container) {
+        return new File(driveC(container), CustomClients.ROOT_NAME);
+    }
+
     public static File bnetExe(Container container) {
         return new File(driveC(container), "Program Files (x86)/Battle.net/Battle.net.exe");
     }

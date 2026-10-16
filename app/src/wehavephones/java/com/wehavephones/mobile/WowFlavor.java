@@ -140,8 +140,14 @@ public enum WowFlavor {
 
     private static final Pattern GAME_PRODUCT_CODE = Pattern.compile("wow(t|xptr|_[a-z0-9_]+)?");
 
-    /** Any Wow*.exe game client, including builds not listed above; excludes the voice helper and WowUp. */
-    private static final Pattern GAME_EXECUTABLE = Pattern.compile("(?i)wow[a-z]*(-arm64)?\\.exe");
+    /**
+     * Any Wow*.exe game client, including builds not listed above and the
+     * Wow-64.exe of older x64 clients; excludes the voice helper and WowUp.
+     */
+    private static final Pattern GAME_EXECUTABLE = Pattern.compile("(?i)wow[a-z]*(-arm64|-64)?\\.exe");
+
+    /** Clients imported without Battle.net may also be named like Wow-64.exe or Wow_3.3.5a.exe. */
+    private static final Pattern CLIENT_EXECUTABLE = Pattern.compile("(?i)wow[a-z0-9_.-]*\\.exe");
 
     public final String directoryName;
     /** Battle.net (TACT) product code, as in product.db, .build.info and .flavor.info. */
@@ -337,6 +343,31 @@ public enum WowFlavor {
             if (fallback.isEmpty()) fallback = name;
         }
         return fallback;
+    }
+
+    /**
+     * Game executable of a client imported without Battle.net (any version,
+     * for example a 3.3.5a Wow.exe): {@link #pickExecutable} without the
+     * crash reporter WowError.exe, then any other Wow*.exe such as Wow-64.exe.
+     * Returns "" when there is none.
+     */
+    public static String pickClientExecutable(List<String> fileNames) {
+        if (fileNames == null) return "";
+        ArrayList<String> candidates = new ArrayList<>();
+        for (String name : fileNames) {
+            if (name != null && !isClientHelper(name)) candidates.add(name);
+        }
+        String picked = pickExecutable(candidates);
+        if (!picked.isEmpty()) return picked;
+        for (String name : candidates) {
+            if (CLIENT_EXECUTABLE.matcher(name).matches()) return name;
+        }
+        return "";
+    }
+
+    private static boolean isClientHelper(String name) {
+        String lower = name.toLowerCase(Locale.US);
+        return lower.startsWith("wowerror") || lower.startsWith("wowvoiceproxy") || lower.equals("wowup.exe");
     }
 
     // ---- versions ----------------------------------------------------------------------

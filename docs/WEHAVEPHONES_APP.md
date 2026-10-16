@@ -161,6 +161,11 @@ desktop wallpaper.
   Downloads is retained. Play, inherited session launches, container switching
   and the Setup container-management button are blocked during import. See
   [Reuse existing WoW game files](REUSE_WOW_FILES.md).
+  **Import your own client** copies any Download folder with a Wow*.exe at
+  its top level to `C:\WoW Clients\<folder>` through the same service
+  (`WowImportService.startClient`, `WowFileImporter.copyClient`), writes its
+  `.wehavephones-client` marker into the staged copy and selects it on Play.
+  See [Clients without Battle.net](CUSTOM_CLIENTS.md).
   Changing the active container retains the running-session protection.
   The runtime profile selector is hidden (`LLRuntimeProfile`,
   `visibility="gone"`) while the bundled file ships one profile. Its code is
@@ -343,10 +348,26 @@ Battle.net** button (`WeHavePhonesPlayController.openBattleNet`) does this.
    2026-10-04 could save one (Keystore-encrypted) and type it, and
    `SecretStore.purgeAccountCredentials` deletes it on start.
 
+### Play a client without Battle.net
+
+Clients under `C:\WoW Clients` (`CustomClients`, pure Java, host-tested in
+`CustomClientsSelfTest`) are listed after the Battle.net games as custom
+products (`WowProduct.isCustom()`, flavor `UNKNOWN`). For them Play skips the
+one-button flow: `WeHavePhonesPlayController.playCustom` applies the single
+runtime, whose applier writes `gxWindow`/`gxMaximize`/`gxResolution` into the
+client's `WTF\Config.wtf` and a `C:\wow.bat` that runs the client's executable
+from its folder, then starts the session on the `AAWoW_Retail` shortcut. The
+second Play button becomes **Realmlist**, which writes `realmlist.wtf` (top
+level and `Data\<locale>`) and `SET realmList` in `Config.wtf`. ConsolePort,
+the glue bridge, the add-on manager and the retail first-boot CVars skip
+custom clients. First-run setup can finish without Battle.net
+(**Skip: I'll import my own client**), and Play only requires Battle.net when
+the selected game is a Battle.net game.
+
 ### Play
 
-Play always goes through Battle.net: only a game Battle.net launched gets
-its sign-in. (Builds before 2026-10-04 could start WoW directly and type a
+Play always goes through Battle.net for Battle.net games: only a game
+Battle.net launched gets its sign-in. (Builds before 2026-10-04 could start WoW directly and type a
 saved or entered password into it. That path is gone.)
 
 `WeHavePhonesPlayController` reads the bundled profile JSON:

@@ -89,6 +89,8 @@ public final class WeHavePhonesMemoryOverrides {
         ArrayList<ConfigPlan> plans = new ArrayList<>();
         LinkedHashMap<String, String> settings = MemoryTransforms.resolutionCvars(afterScreen);
         for (WowProduct product : WowInstallationScanner.scan(container)) {
+            // Clients imported without Battle.net use the older CVars, written when they start.
+            if (product.isCustom()) continue;
             File configFile = new File(new File(product.directory, "WTF"), "Config.wtf");
             if (!configFile.isFile()) continue;
             String original = FileUtils.readString(configFile);

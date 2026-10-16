@@ -55,7 +55,7 @@ public class FirstRunSetupFragment extends Fragment {
     private TextView setupLog;
     private ProgressBar progressBar;
     private String selectedRegion;
-    private Button prepareButton, bnetButton;
+    private Button prepareButton, bnetButton, skipBnetButton;
     private Spinner regionSpinner;
     private TextView bnetGuidance;
 
@@ -111,6 +111,18 @@ public class FirstRunSetupFragment extends Fragment {
                 installBattleNet();
             });
         });
+        // Clients imported without Battle.net need only the container: Setup imports them.
+        skipBnetButton = view.findViewById(R.id.BTSkipBnet);
+        skipBnetButton.setOnClickListener(v -> {
+            if (WORKING.get() || liveSession() || !setupState().containerPrepared) return;
+            if (isNewContainer()) {
+                activity.showHome();
+                return;
+            }
+            WeHavePhonesConfig.setInitialSetupComplete(activity);
+            activity.finishInitialSetup();
+            activity.showSection(new SetupFragment());
+        });
         bnetGuidance = view.findViewById(R.id.TVBnetGuidance);
         Spinner region = regionSpinner = view.findViewById(R.id.SPSetupRegion);
         selectedRegion = WeHavePhonesConfig.getGameRegion(activity);
@@ -159,7 +171,7 @@ public class FirstRunSetupFragment extends Fragment {
 
     @Override public void onDestroyView() {
         refreshHandler.removeCallbacks(refresh);
-        prepareButton = bnetButton = null;
+        prepareButton = bnetButton = skipBnetButton = null;
         setupLog = bnetGuidance = null;
         regionSpinner = null;
         progressBar = null;
@@ -184,6 +196,7 @@ public class FirstRunSetupFragment extends Fragment {
         prepareButton.setText(state.containerPrepared ? R.string.wehavephones_first_run_container_ready : R.string.wehavephones_first_run_container_install);
         prepareButton.setEnabled(!busy && !state.containerPrepared && !live);
         bnetButton.setEnabled(!busy && state.containerPrepared && !live);
+        skipBnetButton.setEnabled(!busy && state.containerPrepared && !live);
         regionSpinner.setEnabled(!busy);
         bnetGuidance.setText(state.containerPrepared ? R.string.wehavephones_first_run_bnet_hint : R.string.wehavephones_first_run_bnet_locked);
         progressBar.setVisibility(busy ? View.VISIBLE : View.GONE);
