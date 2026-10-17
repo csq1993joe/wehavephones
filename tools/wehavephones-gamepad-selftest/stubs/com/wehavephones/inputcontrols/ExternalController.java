@@ -16,4 +16,5 @@ public class ExternalController {
     public boolean isConnected() { return devices.get(id) == this; }
     public boolean updateStateFromMotionEvent(MotionEvent event) { return false; }
     public boolean updateStateFromKeyEvent(KeyEvent event) { return false; }
+    public void releaseInput() { state.copy(new GamepadState()); }
 }

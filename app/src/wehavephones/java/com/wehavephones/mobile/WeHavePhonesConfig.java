@@ -20,6 +20,7 @@ public final class WeHavePhonesConfig {
     public static final String KEY_DISABLE_VIRTUAL_GAMEPAD = "wehavephones_disable_virtual_gamepad";
     public static final String KEY_KEEP_RUNNING_IN_BACKGROUND = "wehavephones_keep_running_in_background";
     public static final String KEY_START_INPUT_BRIDGE = "wehavephones_start_input_bridge";
+    public static final String KEY_CLASSIC_PAD = "wehavephones_classic_pad";
 
     private WeHavePhonesConfig() {}
 
@@ -125,6 +126,18 @@ public final class WeHavePhonesConfig {
 
     public static void setVirtualGamepadDisabled(Context context, boolean disabled) {
         prefs(context).edit().putBoolean(KEY_DISABLE_VIRTUAL_GAMEPAD, disabled).apply();
+    }
+
+    /**
+     * How the controller reaches clients imported without Battle.net: "auto"
+     * (default), a ClassicPadLayout id, or "xinput" for an Xbox controller.
+     */
+    public static String getClassicPadSetting(Context context) {
+        return prefs(context).getString(KEY_CLASSIC_PAD, "auto");
+    }
+
+    public static void setClassicPadSetting(Context context, String setting) {
+        prefs(context).edit().putString(KEY_CLASSIC_PAD, setting != null ? setting : "auto").apply();
     }
 
     /**

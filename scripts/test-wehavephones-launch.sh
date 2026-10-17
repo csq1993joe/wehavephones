@@ -20,6 +20,9 @@
 #   1j. Java (CustomClientsSelfTest): clients imported without Battle.net -
 #      executable choice, safe folder names, realmlist for 1.x/3.x/4.x+
 #      layouts, display CVars, the start batch file, PE versions, the import.
+#   1k. Java (ClassicPadSelfTest): the controller as keyboard and mouse for
+#      those clients - each layout's keys, shared holds, thresholds, pointer,
+#      camera turn, release, and the layout picked from build and add-ons.
 #   2. Python (tools/wehavephones-launch-selftest/reconnect_selftest.py): the
 #      reconnect/detached-run helper scripts/wehavephones-device.py against a fake
 #      adb shim (backoff, give-up deadline, USB preference, drop + resume, the
@@ -245,6 +248,20 @@ if [[ -n "$JAVAC" && -n "$JAVA" ]]; then
     "$JAVA" -cp "$WORK_DIR:${JSON_JAR:-}" com.wehavephones.mobile.CustomClientsSelfTest || fail "CustomClientsSelfTest"
   else
     fail "javac failed for CustomClientsSelfTest"
+  fi
+  rm -rf "$WORK_DIR"
+fi
+
+echo
+echo "[test-wehavephones-launch] == 1k. controller as keyboard and mouse for imported clients =="
+if [[ -n "$JAVAC" && -n "$JAVA" ]]; then
+  rm -rf "$WORK_DIR"
+  mkdir -p "$WORK_DIR"
+  if "$JAVAC" -encoding UTF-8 -d "$WORK_DIR" "$SRC_DIR/ClassicPad.java" "$SRC_DIR/ClassicPadLayout.java" \
+      "$ROOT_DIR/app/src/main/java/com/wehavephones/xserver/XKeycode.java" "$SELF_TEST_DIR/ClassicPadSelfTest.java"; then
+    "$JAVA" -cp "$WORK_DIR" com.wehavephones.mobile.ClassicPadSelfTest || fail "ClassicPadSelfTest"
+  else
+    fail "javac failed for ClassicPadSelfTest"
   fi
   rm -rf "$WORK_DIR"
 fi

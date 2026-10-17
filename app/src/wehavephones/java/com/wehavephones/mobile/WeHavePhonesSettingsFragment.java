@@ -36,6 +36,7 @@ public class WeHavePhonesSettingsFragment extends Fragment {
         setUpGamePreferences(view);
 
         setUpResolution(view.findViewById(R.id.SPGameResolution));
+        setUpClassicPad(view.findViewById(R.id.SPClassicPad));
 
         CheckBox disableGamepad = view.findViewById(R.id.CBDisableVirtualGamepad);
         disableGamepad.setChecked(WeHavePhonesConfig.isVirtualGamepadDisabled(activity));
@@ -96,6 +97,37 @@ public class WeHavePhonesSettingsFragment extends Fragment {
                 activity.updateStageStatus(getString(R.string.wehavephones_settings_saved), false);
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    /** In the order of R.array.wehavephones_classic_pad_options. */
+    private static final String[] CLASSIC_PAD_SETTINGS = {
+            ClassicPadLayout.SETTING_AUTO,
+            ClassicPadLayout.STANDARD.id,
+            ClassicPadLayout.STEAM_DECK.id,
+            ClassicPadLayout.CONSOLE_EXPERIENCE.id,
+            ClassicPadLayout.CONSOLEPORT_LK.id,
+            ClassicPadLayout.SETTING_XINPUT,
+    };
+
+    private void setUpClassicPad(Spinner spinner) {
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(activity,
+                R.array.wehavephones_classic_pad_options, R.layout.wehavephones_spinner_item);
+        adapter.setDropDownViewResource(R.layout.wehavephones_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        int index = Arrays.asList(CLASSIC_PAD_SETTINGS).indexOf(WeHavePhonesConfig.getClassicPadSetting(activity));
+        spinner.setSelection(Math.max(0, index), false);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View selectedView, int position, long id) {
+                String setting = CLASSIC_PAD_SETTINGS[position];
+                if (setting.equals(WeHavePhonesConfig.getClassicPadSetting(activity))) return;
+                WeHavePhonesConfig.setClassicPadSetting(activity, setting);
+                activity.updateStageStatus(getString(R.string.wehavephones_settings_saved), false);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 

@@ -195,7 +195,15 @@ public class AddonsActivity extends AppCompatActivity {
         else {
             builder.append(getString(R.string.wehavephones_addons_missing));
         }
+        // An imported client takes add-ons from Import only; the catalogs serve Battle.net games.
+        boolean importOnly = manager.isImportOnly();
+        if (importOnly) builder.append('\n').append(getString(R.string.wehavephones_addons_import_only));
         pathView.setText(builder.toString());
+        int catalogs = importOnly ? View.GONE : View.VISIBLE;
+        findViewById(R.id.BTAddonsBrowse).setVisibility(catalogs);
+        findViewById(R.id.BTAddonsUpdateAll).setVisibility(catalogs);
+        findViewById(R.id.BTAddonsCurseForge).setVisibility(catalogs);
+        findViewById(R.id.BTAddonsWowUp).setVisibility(catalogs);
     }
 
     private WowProduct productAt(int position) {

@@ -142,13 +142,18 @@ public final class TocParser {
      * folder name, best candidate first for the requested flavor.
      */
     public static List<File> selectTocs(File folder, WowFlavor flavor) {
-        ArrayList<File> candidates = new ArrayList<>();
-        File[] children = folder.listFiles();
-        if (children == null) return candidates;
         String folderName = folder.getName();
         if (folderName.toLowerCase(Locale.US).endsWith(".disabled")) {
             folderName = folderName.substring(0, folderName.length() - ".disabled".length());
         }
+        return selectTocs(folder, folderName, flavor);
+    }
+
+    /** {@link #selectTocs(File, WowFlavor)} for an add-on named {@code folderName}, whatever the folder is called now. */
+    public static List<File> selectTocs(File folder, String folderName, WowFlavor flavor) {
+        ArrayList<File> candidates = new ArrayList<>();
+        File[] children = folder.listFiles();
+        if (children == null) return candidates;
         for (File child : children) {
             if (!child.isFile()) continue;
             String fileName = child.getName();
@@ -169,6 +174,11 @@ public final class TocParser {
 
     public static File chooseBestToc(File folder, WowFlavor flavor) {
         List<File> candidates = selectTocs(folder, flavor);
+        return candidates.isEmpty() ? null : candidates.get(0);
+    }
+
+    public static File chooseBestToc(File folder, String folderName, WowFlavor flavor) {
+        List<File> candidates = selectTocs(folder, folderName, flavor);
         return candidates.isEmpty() ? null : candidates.get(0);
     }
 

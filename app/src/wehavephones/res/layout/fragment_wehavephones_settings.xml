@@ -67,6 +67,19 @@
                     style="@style/WeHavePhonesHint"
                     android:layout_marginTop="9dp"
                     android:text="@string/wehavephones_settings_region_hint" />
+                <TextView
+                    style="@style/WeHavePhonesSectionLabel"
+                    android:text="@string/wehavephones_settings_classic_pad_title" />
+                <Spinner
+                    android:id="@+id/SPClassicPad"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/wehavephones_dropdown"
+                    android:contentDescription="@string/wehavephones_settings_classic_pad_title" />
+                <TextView
+                    style="@style/WeHavePhonesHint"
+                    android:layout_marginTop="9dp"
+                    android:text="@string/wehavephones_settings_classic_pad_hint" />
             </LinearLayout>
             <LinearLayout
                 android:layout_width="0dp"

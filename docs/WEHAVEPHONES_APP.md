@@ -359,10 +359,14 @@ client's `WTF\Config.wtf` and a `C:\wow.bat` that runs the client's executable
 from its folder, then starts the session on the `AAWoW_Retail` shortcut. The
 second Play button becomes **Realmlist**, which writes `realmlist.wtf` (top
 level and `Data\<locale>`) and `SET realmList` in `Config.wtf`. ConsolePort,
-the glue bridge, the add-on manager and the retail first-boot CVars skip
-custom clients. First-run setup can finish without Battle.net
-(**Skip: I'll import my own client**), and Play only requires Battle.net when
-the selected game is a Battle.net game.
+the glue bridge and the retail first-boot CVars skip custom clients; the
+add-on manager lists them for **Import ZIP** only (no catalogs or updates,
+records keyed `imported:<folder>`). The controller reaches clients without
+gamepad support as keyboard and mouse (engine hook 12,
+[CLASSIC_CONTROLLERS.md](CLASSIC_CONTROLLERS.md)), and the soft keyboard
+types key presses with Backspace and Enter for them. First-run setup can
+finish without Battle.net (**Skip: I'll import my own client**), and Play
+only requires Battle.net when the selected game is a Battle.net game.
 
 ### Play
 
@@ -661,6 +665,28 @@ Keep running in the background (2026-09-28):
     Idle/Complete notifications 200 ms apart (`PresentPacer`, in order),
     which holds the swapchain to 5 FPS. Host test:
     `scripts/test-wehavephones-runtime.sh` §3.
+
+Controller as keyboard and mouse for imported clients (2026-10-17):
+
+12. `ClassicPadBridge` (wehavephones flavor, through `SessionInputExtras`):
+    WoW reads a gamepad only from 9.0 and in the Classic re-releases, so the
+    virtual Xbox controller does nothing in a 1.x to 8.x client imported
+    without Battle.net. A poller finds the game process, matches
+    `/proc/<pid>/cwd` to an imported client and picks a `ClassicPadLayout`
+    (Settings, else the client build and its controller add-on:
+    ConsoleExperienceClassic, ConsolePortLK, ShaguController, or standard
+    keys). WinHandler's consumed input (physical, and the on-screen gamepad
+    through `onVirtualGamepadInput`) then drives a `ClassicPad` on the UI
+    thread, which injects X keys and pointer events with counted holds; a
+    16 ms ticker moves the pointer for the right stick or holds the right
+    button for a camera turn. `ExternalController` keeps the D-pad without
+    the left-stick guard (`rawDpad`) and the analog triggers for it, and
+    `releaseInput()` clears them on hotplug and when the session pauses.
+    The guest still gets its Xbox controller. Pure logic host-tested in
+    `ClassicPadSelfTest` (`scripts/test-wehavephones-launch.sh` §1k).
+    `dispatchGenericMotionEvent` also gives the sticks and triggers of a
+    controller to a shown controls profile that maps that controller, as
+    `dispatchKeyEvent` already did for its buttons.
 
 Everything else reuses existing public APIs: `ImageFs`, `ContainerManager`,
 `Container`, `Shortcut`, `WinHandler`, `ProcessHelper`, `HttpUtils`.

@@ -93,13 +93,32 @@ A folder you put under `C:\WoW Clients` yourself (Containers → ⋮ → Run, th
 the container's file manager) also appears on Play when it has a Wow*.exe at
 its top level; the marker is optional.
 
+## Controller
+
+Clients from 1.x to 8.x cannot read a gamepad, so the app plays the
+controller and the on-screen gamepad as keyboard and mouse, with the keys of
+the controller add-on the client has: ConsoleExperienceClassic or
+ShaguController for 1.12, ConsolePortLK for 3.3.5a, or standard keys. See
+[Controllers in imported clients](CLASSIC_CONTROLLERS.md) for the layouts,
+the add-ons and **Settings → Controller in imported clients**.
+
+The soft keyboard (side menu → Keyboard) types key presses for imported
+clients, with Backspace and Enter, so it works at the login screen and in
+chat.
+
+## Add-ons
+
+Open **Add-ons**, pick the client at the top and use **Import ZIP**. A
+GitHub "Download ZIP" (`Name-main`) or tag archive is installed under its TOC
+name. Enable, disable and delete work as for Battle.net games. Search and
+updates are only for Battle.net games: their catalogs serve current clients.
+
 ## What stays Battle.net only
 
 For imported clients the app does not install ConsolePort or the pre-game
 controller bridge (current ConsolePort raises Lua errors in older clients),
-does not list them in the add-on manager, and does not write the retail
-first-boot settings (portal, region, Direct3D 12). Manage their
-`Interface\AddOns` folder yourself.
+does not search or update their add-ons, and does not write the retail
+first-boot settings (portal, region, Direct3D 12).
 
 To remove a client, delete its folder under `C:\WoW Clients` in the
 container's file manager.

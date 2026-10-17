@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.wehavephones.mobile.CustomClients;
 import com.wehavephones.mobile.WeHavePhonesContainers;
 import com.wehavephones.mobile.WeHavePhonesPaths;
 import com.wehavephones.mobile.WowInstallationScanner;
@@ -76,6 +77,8 @@ public final class AddonManager {
     }
 
     private static final long PRODUCT_CACHE_MS = 60 * 1000L;
+    /** Records of an imported client are kept under this prefix and its folder name. */
+    static final String IMPORTED_CLIENT_KEY = "imported:";
     private static final long MAX_IMPORT_BYTES = 512L * 1024L * 1024L;
 
     private final Context context;
@@ -167,10 +170,8 @@ public final class AddonManager {
             return cachedProducts;
         }
         Container container = WeHavePhonesContainers.resolve(context);
-        ArrayList<WowProduct> scanned = container != null ? WowInstallationScanner.scan(container) : new ArrayList<WowProduct>();
-        // The addon catalogs serve current Battle.net clients; custom clients keep their own AddOns folder.
-        scanned.removeIf(WowProduct::isCustom);
-        cachedProducts = scanned;
+        // Imported clients come last; they take add-ons from Import only (see isImportOnly).
+        cachedProducts = container != null ? WowInstallationScanner.scan(container) : new ArrayList<WowProduct>();
         productsLoadedAt = now;
         return cachedProducts;
     }
@@ -198,9 +199,50 @@ public final class AddonManager {
         return product != null ? product.getFlavor() : WowFlavor.UNKNOWN;
     }
 
+    /**
+     * A client imported without Battle.net is selected. Its add-ons come from
+     * Import (.zip) only: the catalogs and their updates serve current
+     * Battle.net clients, and a TOC's catalog id or ConsolePort's name (as
+     * ConsolePortLK uses) would offer a retail build to an old client.
+     */
+    public boolean isImportOnly() {
+        WowProduct product = selectedProduct();
+        return product != null && product.isCustom();
+    }
+
+    /** Index key of the selected game's records: its flavor, or its own folder for an imported client (their flavor is unknown). */
+    private String recordKey() {
+        WowProduct product = selectedProduct();
+        if (product != null && product.isCustom()) return IMPORTED_CLIENT_KEY + product.directoryName;
+        return flavor().directoryName;
+    }
+
+    private void requireCatalogs() throws IOException {
+        if (isImportOnly()) {
+            throw new IOException("Imported clients take add-ons from Import (.zip); the catalogs serve Battle.net games");
+        }
+    }
+
+    /** No catalog binding or update state: the add-on stays as the player imported it. */
+    private static void keepLocal(AddonRecord record) {
+        record.providerId = ProviderType.LOCAL.id;
+        record.externalId = "";
+        record.providerVersionId = "";
+        record.latestVersion = "";
+        record.latestReleaseId = "";
+        record.latestReleaseDate = 0;
+        record.latestUrl = "";
+        record.latestChangelog = "";
+        record.lastError = "";
+        if (!record.enabled) record.setStatus(InstallStatus.DISABLED);
+        else if (!record.unrecognized) record.setStatus(InstallStatus.LOCAL_ONLY);
+    }
+
     public File addonsDir() {
         WowProduct product = selectedProduct();
         if (product == null) return null;
+        // Imported clients live under C:\WoW Clients, outside a Battle.net root override.
+        if (product.isCustom()) return product.directory != null ? CustomClients.addonsDir(product.directory) : null;
         if (index.wowRootOverride != null && !index.wowRootOverride.isEmpty() && product.directory != null) {
             String relative = product.directory.getName();
             return new File(new File(index.wowRootOverride, relative), "Interface/AddOns");
@@ -234,9 +276,10 @@ public final class AddonManager {
         runAsync(new Job<Integer>() {
             @Override
             public Integer run() throws Exception {
+                if (isImportOnly()) return 0;
                 List<AddonRecord> flavorRecords;
                 synchronized (indexLock) {
-                    flavorRecords = index.forFlavor(flavor().directoryName);
+                    flavorRecords = index.forFlavor(recordKey());
                     int checked = UpdateChecker.checkAll(flavorRecords, registry, flavor(), interfaceNumber(), null);
                     saveIndex();
                     AddonPrefs.setLastUpdateAll(context, System.currentTimeMillis());
@@ -251,6 +294,7 @@ public final class AddonManager {
         runAsync(new Job<List<RemoteAddon>>() {
             @Override
             public List<RemoteAddon> run() throws Exception {
+                requireCatalogs();
                 AddonProvider provider = registry.get(providerType);
                 if (provider == null) throw new ProviderException(ProviderException.Kind.UNSUPPORTED,
                         "Unknown provider");
@@ -290,6 +334,7 @@ public final class AddonManager {
         runAsync(new Job<String>() {
             @Override
             public String run() throws Exception {
+                requireCatalogs();
                 return installInternal(addon, file);
             }
         }, callback);
@@ -301,6 +346,7 @@ public final class AddonManager {
             @Override
             public String run() throws Exception {
                 if (addon == null) throw new IOException("No addon selected");
+                requireCatalogs();
                 AddonProvider provider = registry.get(addon.provider);
                 if (provider == null || !provider.isConfigured()) {
                     throw new ProviderException(ProviderException.Kind.AUTH,
@@ -321,6 +367,7 @@ public final class AddonManager {
             @Override
             public String run() throws Exception {
                 if (record == null) throw new IOException("No addon selected");
+                requireCatalogs();
                 AddonProvider provider = registry.get(record.provider());
                 if (provider == null || !provider.isConfigured()) {
                     throw new ProviderException(ProviderException.Kind.AUTH,
@@ -342,10 +389,11 @@ public final class AddonManager {
         runAsync(new Job<Integer>() {
             @Override
             public Integer run() throws Exception {
+                if (isImportOnly()) return 0;
                 requireGameClosed();
                 List<AddonRecord> pending;
                 synchronized (indexLock) {
-                    List<AddonRecord> flavorRecords = index.forFlavor(flavor().directoryName);
+                    List<AddonRecord> flavorRecords = index.forFlavor(recordKey());
                     UpdateChecker.checkAll(flavorRecords, registry, flavor(), interfaceNumber(), null);
                     pending = new ArrayList<>();
                     for (AddonRecord record : flavorRecords) {
@@ -544,6 +592,7 @@ public final class AddonManager {
             @Override
             public String run() throws Exception {
                 if (record == null) throw new IOException("No addon selected");
+                if (isImportOnly()) return "";
                 if (record.latestChangelog != null && !record.latestChangelog.isEmpty()) {
                     return record.latestChangelog;
                 }
@@ -559,7 +608,8 @@ public final class AddonManager {
 
     /** ConsolePort and its setup companion outside Forever: the app reinstalls them, so they can be disabled but not deleted. */
     public boolean isRequired(AddonRecord record) {
-        if (record == null || !ConsolePort.requiredFor(flavor())) return false;
+        // An imported client's ConsolePort folder is the player's own (ConsolePortLK on 3.3.5a).
+        if (record == null || isImportOnly() || !ConsolePort.requiredFor(flavor())) return false;
         if (ConsolePort.isConsolePort(record)) return true;
         for (String folder : record.folderNames) {
             if (ControllerSetupAddon.isFolder(folder)) return true;
@@ -617,12 +667,18 @@ public final class AddonManager {
     private void syncScan() {
         File addons = addonsDir();
         if (addons == null) return;
+        String key = recordKey();
+        boolean importOnly = isImportOnly();
         synchronized (indexLock) {
             AddonScanner.ScanResult result = AddonScanner.scan(addons, flavor(),
-                    index.forFlavor(flavor().directoryName));
+                    index.forFlavor(key));
+            for (AddonRecord record : result.records) {
+                record.flavorDir = key;
+                if (importOnly) keepLocal(record);
+            }
             ArrayList<AddonRecord> others = new ArrayList<>();
             for (AddonRecord record : index.addons) {
-                if (!record.flavorDir.equals(flavor().directoryName)) others.add(record);
+                if (!record.flavorDir.equals(key)) others.add(record);
             }
             index.addons.clear();
             index.addons.addAll(others);
@@ -639,7 +695,7 @@ public final class AddonManager {
     private AddonRecord findExisting(ProviderType provider, String externalId,
                                      List<DiscoveredAddon> discovered) {
         synchronized (indexLock) {
-            AddonRecord byBinding = index.findByBinding(provider.id, externalId, flavor().directoryName);
+            AddonRecord byBinding = index.findByBinding(provider.id, externalId, recordKey());
             if (byBinding != null) return byBinding;
             for (DiscoveredAddon addon : discovered) {
                 AddonRecord byFolder = findByFolder(addon.folderName);
@@ -653,7 +709,7 @@ public final class AddonManager {
         if (folderName == null) return null;
         synchronized (indexLock) {
             for (AddonRecord record : index.addons) {
-                if (!record.flavorDir.equals(flavor().directoryName)) continue;
+                if (!record.flavorDir.equals(recordKey())) continue;
                 for (String folder : record.folderNames) {
                     if (folder.equalsIgnoreCase(folderName)
                             || (folder + ".disabled").equalsIgnoreCase(folderName)) {
@@ -669,7 +725,7 @@ public final class AddonManager {
                                String sha256, boolean keepDisabled, AddonRecord existing) {
         synchronized (indexLock) {
             AddonRecord record = existing != null ? existing : new AddonRecord();
-            record.flavorDir = flavor().directoryName;
+            record.flavorDir = recordKey();
             record.providerId = file.provider.id;
             record.externalId = file.externalId;
             record.providerVersionId = file.releaseId;
@@ -698,8 +754,8 @@ public final class AddonManager {
         synchronized (indexLock) {
             AddonRecord record = findByFolder(addon.folderName);
             if (record == null) record = new AddonRecord();
-            record.flavorDir = flavor().directoryName;
-            if (addon.toc != null) {
+            record.flavorDir = recordKey();
+            if (addon.toc != null && !isImportOnly()) {
                 TocData.ProviderBinding binding = addon.toc.identity();
                 if (binding != null && binding.provider.isRemote()) {
                     record.providerId = binding.provider.id;
@@ -821,7 +877,7 @@ public final class AddonManager {
         synchronized (indexLock) {
             ArrayList<AddonRecord> result = new ArrayList<>();
             for (AddonRecord record : index.addons) {
-                if (record.flavorDir.equals(flavor().directoryName)) result.add(record);
+                if (record.flavorDir.equals(recordKey())) result.add(record);
             }
             Collections.sort(result, new java.util.Comparator<AddonRecord>() {
                 @Override

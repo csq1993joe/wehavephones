@@ -139,6 +139,8 @@ import java.util.concurrent.Executors;
     private static final int GENERAL_PATCH_VERSION = 6;
     private XServerView xServerView;
     private InputControlsView inputControlsView;
+    private ControlsProfile checkedControllerProfile;
+    private boolean checkedProfileMapsControllers;
     private TouchpadView touchpadView;
     private XEnvironment environment;
     private DrawerLayout drawerLayout;
@@ -391,6 +393,7 @@ import java.util.concurrent.Executors;
     @Override
     public void onPause() {
         super.onPause();
+        SessionInputExtras.onSessionPaused(this);
         if (environment != null) {
             // With keep-alive the game keeps running (and stays online) while hidden, at 5 FPS.
             if (keepRunningInBackground) setHiddenFramePacing(true);
@@ -975,13 +978,13 @@ import java.util.concurrent.Executors;
             @Override
             public void onCommitText(CharSequence text) {
                 if (text == null || text.length() == 0 || xServer == null) return;
-                if (view.isPrivateInput()) typeSignInText(text);
+                if (typesKeys(view)) typeAsKeys(text);
                 else forwardImeCommitToWoW(text);
             }
 
             @Override
             public void onDeleteSurroundingText(int beforeLength, int afterLength) {
-                if (view.isPrivateInput() && xServer != null) pressKey(XKeycode.KEY_BKSP, Math.min(beforeLength, 64));
+                if (typesKeys(view) && xServer != null) pressKey(XKeycode.KEY_BKSP, Math.min(beforeLength, 64));
             }
 
             @Override
@@ -993,7 +996,7 @@ import java.util.concurrent.Executors;
             @Override
             public void onEditorAction(int actionCode) {
                 if (xServer == null) return;
-                if (view.isPrivateInput()) pressKey(XKeycode.KEY_ENTER, 1);
+                if (typesKeys(view)) pressKey(XKeycode.KEY_ENTER, 1);
                 // No-op: keyboard hide should be driven by WoW focus loss (ime_focus=false),
                 // not by IME editor action / Enter.
             }
@@ -1050,10 +1053,19 @@ import java.util.concurrent.Executors;
     }
 
     /**
-     * Battle.net sign-in text goes in as ordinary key presses, like a hardware keyboard,
-     * so passwords typed with keyboard characters skip the Wine and Android clipboard.
+     * Sign-in fields, and clients imported without Battle.net, get the soft keyboard as
+     * key presses with Backspace and Enter: passwords skip the clipboard, and old clients'
+     * login and chat boxes take typed keys where a paste may not land.
      */
-    private void typeSignInText(CharSequence text) {
+    private boolean typesKeys(ImeBridgeEditText view) {
+        return view.isPrivateInput() || SessionInputExtras.imeTypesKeys(this);
+    }
+
+    /**
+     * Text goes in as ordinary key presses, like a hardware keyboard, so passwords typed
+     * with keyboard characters skip the Wine and Android clipboard.
+     */
+    private void typeAsKeys(CharSequence text) {
         KeyEvent[] events = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(text.toString().toCharArray());
         if (events == null) {
             // Characters without a key on the virtual keyboard keep the paste path.
@@ -1547,6 +1559,13 @@ import java.util.concurrent.Executors;
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        // A controls profile that maps this controller gets its sticks and triggers too, as it gets its
+        // buttons in dispatchKeyEvent; otherwise WinHandler would consume them for the virtual Xbox pad.
+        ControlsProfile controllerProfile = controllerMappingProfile();
+        if (controllerProfile != null && controllerProfile.getController(event.getDeviceId()) != null
+                && inputControlsView.onGenericMotionEvent(event)) {
+            return true;
+        }
         boolean handledByWinHandler = winHandler.onGenericMotionEvent(event);
         if (handledByWinHandler) SessionInputExtras.onControllerInput(this);
         return !handledByWinHandler && !touchpadView.onExternalMouseEvent(event) && super.dispatchGenericMotionEvent(event);
@@ -1561,6 +1580,21 @@ import java.util.concurrent.Executors;
         boolean handledByControllers = handledByInputControls || handledByWinHandler || handledByKeyboard;
         boolean handledBySystem = !ExternalController.isGameController(event.getDevice()) && super.dispatchKeyEvent(event);
         return handledByControllers || handledBySystem;
+    }
+
+    /**
+     * The shown controls profile when it maps external controllers; checked
+     * once per profile, because a profile without them rereads its file on
+     * every controller lookup.
+     */
+    private ControlsProfile controllerMappingProfile() {
+        ControlsProfile profile = inputControlsView.getVisibility() == View.VISIBLE ? inputControlsView.getProfile() : null;
+        if (profile == null) return null;
+        if (profile != checkedControllerProfile) {
+            checkedControllerProfile = profile;
+            checkedProfileMapsControllers = !profile.loadControllers().isEmpty();
+        }
+        return checkedProfileMapsControllers ? profile : null;
     }
 
     public InputControlsView getInputControlsView() {
