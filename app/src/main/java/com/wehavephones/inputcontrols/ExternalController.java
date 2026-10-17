@@ -12,6 +12,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ExternalController {
     private static final String TAG_INPUT_PROBE = "InputProbe";
@@ -34,6 +35,14 @@ public class ExternalController {
     private int deviceId = -1;
     private final ArrayList<ExternalControllerBinding> controllerBindings = new ArrayList<>();
     public final GamepadState state = new GamepadState();
+    /**
+     * D-pad as pressed, without the left-stick guard {@link #state} applies,
+     * and the analog triggers (0..1): the keyboard mapping for clients without
+     * gamepad support needs the D-pad while the player runs.
+     */
+    public final boolean[] rawDpad = new boolean[4];
+    public float leftTrigger = 0;
+    public float rightTrigger = 0;
 
     public String getName() {
         return name;
@@ -70,6 +79,14 @@ public class ExternalController {
             if (device != null && device.getDescriptor().equals(id)) return true;
         }
         return false;
+    }
+
+    /** Releases every button, stick, the raw D-pad and the triggers (hotplug, a hidden session). */
+    public void releaseInput() {
+        state.copy(new GamepadState());
+        Arrays.fill(rawDpad, false);
+        leftTrigger = 0;
+        rightTrigger = 0;
     }
 
     public ExternalControllerBinding getControllerBinding(int keyCode) {
@@ -132,6 +149,10 @@ public class ExternalController {
             float axisX = getCenteredAxis(event, MotionEvent.AXIS_HAT_X, historyPos);
             float axisY = getCenteredAxis(event, MotionEvent.AXIS_HAT_Y, historyPos);
 
+            rawDpad[0] = axisY == -1.0f;
+            rawDpad[1] = axisX == 1.0f;
+            rawDpad[2] = axisY == 1.0f;
+            rawDpad[3] = axisX == -1.0f;
             state.dpad[0] = axisY == -1.0f && Math.abs(state.thumbLY) < ControlElement.STICK_DEAD_ZONE;
             state.dpad[1] = axisX ==  1.0f && Math.abs(state.thumbLX) < ControlElement.STICK_DEAD_ZONE;
             state.dpad[2] = axisY ==  1.0f && Math.abs(state.thumbLY) < ControlElement.STICK_DEAD_ZONE;
@@ -140,6 +161,8 @@ public class ExternalController {
     }
 
     private void processTriggerButton(MotionEvent event) {
+        leftTrigger = Math.max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE));
+        rightTrigger = Math.max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS));
         state.setPressed(IDX_BUTTON_L2, event.getAxisValue(MotionEvent.AXIS_LTRIGGER) == 1.0f || event.getAxisValue(MotionEvent.AXIS_BRAKE) == 1.0f);
         state.setPressed(IDX_BUTTON_R2, event.getAxisValue(MotionEvent.AXIS_RTRIGGER) == 1.0f || event.getAxisValue(MotionEvent.AXIS_GAS) == 1.0f);
     }
@@ -176,15 +199,19 @@ public class ExternalController {
 
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
+                rawDpad[0] = pressed;
                 state.dpad[0] = pressed && Math.abs(state.thumbLY) < ControlElement.STICK_DEAD_ZONE;
                 return true;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
+                rawDpad[1] = pressed;
                 state.dpad[1] = pressed && Math.abs(state.thumbLX) < ControlElement.STICK_DEAD_ZONE;
                 return true;
             case KeyEvent.KEYCODE_DPAD_DOWN:
+                rawDpad[2] = pressed;
                 state.dpad[2] = pressed && Math.abs(state.thumbLY) < ControlElement.STICK_DEAD_ZONE;
                 return true;
             case KeyEvent.KEYCODE_DPAD_LEFT:
+                rawDpad[3] = pressed;
                 state.dpad[3] = pressed && Math.abs(state.thumbLX) < ControlElement.STICK_DEAD_ZONE;
                 return true;
         }

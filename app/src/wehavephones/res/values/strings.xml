@@ -96,6 +96,16 @@
     <string name="wehavephones_settings_game_preferences">Game preferences</string>
     <string name="wehavephones_settings_disable_virtual_gamepad">Disable virtual gamepad</string>
     <string name="wehavephones_settings_region_hint">Changes apply the next time you launch the game.</string>
+    <string name="wehavephones_settings_classic_pad_title">Controller in imported clients</string>
+    <string name="wehavephones_settings_classic_pad_hint">Clients without gamepad support (1.x to 8.x) get the controller and the on-screen gamepad as keyboard and mouse. Automatic uses the keys of the controller add-on in the client (ConsoleExperienceClassic, ShaguController, ConsolePortLK), else standard keys; 9.0 and the Classic re-releases get an Xbox controller. A change applies within a second, also in a running game.</string>
+    <string-array name="wehavephones_classic_pad_options">
+        <item>Automatic (recommended)</item>
+        <item>Standard keys</item>
+        <item>Steam Deck keys (ShaguController)</item>
+        <item>ConsoleExperienceClassic (1.12)</item>
+        <item>ConsolePortLK (3.3.5a)</item>
+        <item>Xbox controller (no keys)</item>
+    </string-array>
     <string name="wehavephones_settings_region_china">China uses its own Battle.net app, so this container\'s Battle.net can\'t switch to or from it. Use "Add New" in Setup and pick the region there.</string>
     <string name="wehavephones_open_bnet">Open Battle.net</string>
     <string name="wehavephones_home_setup_complete">Setup complete. Sign in to Battle.net and install your WoW version.</string>
@@ -232,6 +242,7 @@
     <string name="wehavephones_addon_app_dlls_failed">Could not prepare the Windows files %1$s needs.</string>
     <string name="wehavephones_addons_path">AddOns directory</string>
     <string name="wehavephones_addons_missing">Container or game directory not found yet.</string>
+    <string name="wehavephones_addons_import_only">Imported client: add add-ons with Import ZIP, for example a GitHub "Download ZIP". Search and updates are for Battle.net games.</string>
     <string name="wehavephones_addons_empty">No add-ons installed for this product yet. Use Browse to install from a provider or Import ZIP to sideload an archive.</string>
     <string name="wehavephones_addons_no_products">No World of Warcraft installation detected. Install it through Battle.net, then rescan.</string>
     <string name="wehavephones_addons_product_line">%1$s - interface %2$d</string>

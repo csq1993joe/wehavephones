@@ -397,6 +397,49 @@ public final class AddonLogicSelfTest {
         List<DiscoveredAddon> inner = ZipImporter.discoverAddons(destination2, WowFlavor.RETAIL);
         checkEquals(1, inner.size(), "embedded Interface/AddOns traversed");
         checkEquals("3.1", inner.get(0).version(), "inner addon version");
+
+        // GitHub "Download ZIP" and tag archives: the add-on sits in Name-branch or Name-tag.
+        File github = new File(workDir, "github.zip");
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(github))) {
+            addEntry(out, "ShaguController-master/ShaguController.toc", "## Interface: 11200\n## Version: GIT\n");
+            addEntry(out, "ShaguController-master/core.lua", "return 1\n");
+            addEntry(out, "ShaguController-master/img/a.tga", "x\n");
+        }
+        File githubOut = new File(workDir, "extract-github");
+        SafeZipExtractor.extract(github, githubOut, null);
+        List<DiscoveredAddon> shagu = ZipImporter.discoverAddons(githubOut, WowFlavor.UNKNOWN);
+        checkEquals(1, shagu.size(), "branch archive is one add-on");
+        checkEquals("ShaguController", shagu.get(0).folderName, "installed under its TOC name");
+        check(shagu.get(0).toc != null, "branch archive TOC parsed");
+
+        File tagged = new File(workDir, "tagged.zip");
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tagged))) {
+            addEntry(out, "consoleexperienceclassic-0.17.3/ConsoleExperienceClassic.toc",
+                    "## Interface: 11200\n## Version: 0.17.3\n");
+            addEntry(out, "consoleexperienceclassic-0.17.3/main.lua", "return 1\n");
+            addEntry(out, "Questie-335-main/Questie-335.toc", "## Interface: 30300\n");
+            addEntry(out, "Questie-335-main/Questie.lua", "return 1\n");
+        }
+        File taggedOut = new File(workDir, "extract-tagged");
+        SafeZipExtractor.extract(tagged, taggedOut, null);
+        List<DiscoveredAddon> taggedAddons = ZipImporter.discoverAddons(taggedOut, WowFlavor.UNKNOWN);
+        checkEquals(2, taggedAddons.size(), "tag and branch archives side by side");
+        List<String> names = ZipImporter.folderNames(taggedAddons);
+        check(names.contains("ConsoleExperienceClassic"), "tag archive named with the TOC's letter case: " + names);
+        check(names.contains("Questie-335"), "a dash inside the add-on name is kept: " + names);
+
+        File monorepo = new File(workDir, "monorepo.zip");
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(monorepo))) {
+            addEntry(out, "ConsolePortLK-master/README.md", "docs\n");
+            addEntry(out, "ConsolePortLK-master/ConsolePort/ConsolePort.toc", "## Interface: 30300\n");
+            addEntry(out, "ConsolePortLK-master/ConsolePortBar/ConsolePortBar.toc", "## Interface: 30300\n");
+            addEntry(out, "Notes-1.0/Readme.toc", "## Interface: 30300\n");
+        }
+        File monorepoOut = new File(workDir, "extract-monorepo");
+        SafeZipExtractor.extract(monorepo, monorepoOut, null);
+        List<String> modules = ZipImporter.folderNames(ZipImporter.discoverAddons(monorepoOut, WowFlavor.UNKNOWN));
+        check(modules.contains("ConsolePort") && modules.contains("ConsolePortBar") && modules.size() == 2,
+                "a repository of several add-ons installs each; a TOC of another name is not an add-on: " + modules);
     }
 
     private static void testInstallAndRollback() throws Exception {

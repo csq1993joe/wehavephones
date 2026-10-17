@@ -528,7 +528,7 @@ public class WinHandler {
             ExternalController next = ExternalController.getController(0);
             if (previous == null && next == null) return;
             if (previous != null) {
-                previous.state.copy(new GamepadState());
+                previous.releaseInput();
                 // Release keys injected by the pre-game bridge before dropping the old device.
                 SessionInputExtras.onControllerInput(activity);
             }

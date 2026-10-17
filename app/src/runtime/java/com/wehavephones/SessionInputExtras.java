@@ -8,8 +8,15 @@ public final class SessionInputExtras {
 
     public static void onSessionResumed(XServerDisplayActivity activity) {}
 
+    public static void onSessionPaused(XServerDisplayActivity activity) {}
+
     public static void onSessionDestroyed(XServerDisplayActivity activity) {}
 
     /** Controller input that WinHandler consumed. */
     public static void onControllerInput(XServerDisplayActivity activity) {}
+
+    /** The soft keyboard pastes its text, except into sign-in fields. */
+    public static boolean imeTypesKeys(XServerDisplayActivity activity) {
+        return false;
+    }
 }

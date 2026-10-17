@@ -48,7 +48,10 @@ You need a 64-bit ARM phone with Android 8.0 or newer and enough free space for 
 
 To play a client that runs without Battle.net (any version, on a server set
 with its realmlist), skip Battle.net in Setup and use **Import your own
-client**; see [Clients without Battle.net](docs/CUSTOM_CLIENTS.md).
+client**; see [Clients without Battle.net](docs/CUSTOM_CLIENTS.md). Older
+clients (1.x to 8.x) get the controller as keyboard and mouse, matched to
+ConsoleExperienceClassic, ShaguController or ConsolePortLK; see
+[Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md).
 
 ## Build from source
 
@@ -69,6 +72,7 @@ The APK is written to `app/build/outputs/apk/wehavephones/debug/app-wehavephones
 - [Runtime and the patched Wine ntdll](docs/WEHAVEPHONES_RUNTIME.md)
 - [Addon manager](docs/WEHAVEPHONES_ADDONS.md)
 - [Clients without Battle.net](docs/CUSTOM_CLIENTS.md)
+- [Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md)
 - [Input Bridge on-screen keys](docs/INPUT_BRIDGE.md)
 - [Device profiles](docs/DEVICE_PROFILES.md)
 - [Device reports](docs/DEVICE_REPORTS.md)

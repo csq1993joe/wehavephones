@@ -322,6 +322,11 @@ public final class CustomClients {
         return child(child(clientDir, "WTF"), "Config.wtf");
     }
 
+    /** The client's Interface\AddOns, reusing the folders it has whatever their letter case; it may not exist yet. */
+    public static File addonsDir(File clientDir) {
+        return child(child(clientDir, "Interface"), "AddOns");
+    }
+
     // ---- executable version -------------------------------------------------------------
 
     /** File version from the executable's version resource (for example 3.3.5.12340); empty when unknown. */

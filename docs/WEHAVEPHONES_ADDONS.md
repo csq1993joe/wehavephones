@@ -94,7 +94,19 @@ operation, which cleans all older delete-backups.
 `ACTION_OPEN_DOCUMENT` → copy with size cap → safe extract → discover → the UI
 shows a multi-choice confirmation with name/version/inferred provider identity →
 selected folders are installed, the index is rebound from TOC `X-…-ID` values
-when present (otherwise `LOCAL_ONLY`).
+when present (otherwise `LOCAL_ONLY`). A GitHub source archive folder
+(`Name-main`, `Name-master`, `Name-1.2.3`) whose TOC is `Name.toc` (or a
+flavor variant) installs as `Name`.
+
+### Imported clients
+Clients imported without Battle.net (`WowProduct.isCustom()`) are listed after
+the Battle.net games and take add-ons from Local ZIP import only
+(`AddonManager.isImportOnly()`): search, installs from catalogs, updates and
+changelogs are refused, and their records never keep a provider binding or
+the ConsolePort binding (a ConsolePortLK `ConsolePort` folder would otherwise
+be offered retail ConsolePort). Their flavor is unknown, so records are keyed
+`imported:<folder>` instead of the flavor directory, and their `AddOns` path is
+resolved inside the client folder, ignoring the WoW root override.
 
 ## 4. Persistence
 
