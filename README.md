@@ -8,15 +8,17 @@ Controller support.\
 Built-in addon manager.
 
 > **This fork** of [ashmerra/wehavephones](https://github.com/ashmerra/wehavephones)
-> adds clients that run without Battle.net (import your own 1.12, 2.4.3,
-> 3.3.5a… client and set its realmlist), the controller as keyboard and mouse
-> in clients without gamepad support (matched to ConsoleExperienceClassic,
-> ShaguController or ConsolePortLK), and add-on import for those clients. See
-> [Clients without Battle.net](docs/CUSTOM_CLIENTS.md) and
-> [Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md).
+> adds clients that run without Battle.net (import your own client and set its
+> realmlist), the controller as keyboard and mouse in clients without gamepad
+> support (matched to ConsoleExperienceClassic, ShaguController or
+> ConsolePortLK), and add-on import for those clients. **Tested only with a
+> 1.12.1 (vanilla) client**, at a steady 60 FPS on a vivo X100 Ultra; other
+> versions are untested. See [Clients without Battle.net](docs/CUSTOM_CLIENTS.md)
+> and [Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md).
 >
-> 本分支增加：无需战网导入任意版本客户端并设置 realmlist；老版本客户端手柄转键鼠，
+> 本分支增加：无需战网导入自己的客户端并设置 realmlist；老版本客户端手柄转键鼠，
 > 自动适配 ConsoleExperienceClassic / ShaguController / ConsolePortLK；导入客户端的插件安装。
+> **目前只实测过 1.12.1 香草版本**（vivo X100 Ultra 稳定 60 帧），其他版本尚未测试。
 
 > **Alpha build:** WeHavePhones is still in development. Expect bugs, rough edges, and compatibility differences between phones. Report problems through Diagnostics in the app.
 
@@ -62,7 +64,8 @@ with its realmlist), skip Battle.net in Setup and use **Import your own
 client**; see [Clients without Battle.net](docs/CUSTOM_CLIENTS.md). Older
 clients (1.x to 8.x) get the controller as keyboard and mouse, matched to
 ConsoleExperienceClassic, ShaguController or ConsolePortLK; see
-[Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md).
+[Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md). Only a 1.12.1
+client has been tested so far.
 
 ## Build from source
 
