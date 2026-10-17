@@ -7,6 +7,17 @@ Winlator fork for running World of Warcraft (ARM64 Windows version) and Battle.n
 Controller support.\
 Built-in addon manager.
 
+> **This fork** of [ashmerra/wehavephones](https://github.com/ashmerra/wehavephones)
+> adds clients that run without Battle.net (import your own 1.12, 2.4.3,
+> 3.3.5a… client and set its realmlist), the controller as keyboard and mouse
+> in clients without gamepad support (matched to ConsoleExperienceClassic,
+> ShaguController or ConsolePortLK), and add-on import for those clients. See
+> [Clients without Battle.net](docs/CUSTOM_CLIENTS.md) and
+> [Controllers in imported clients](docs/CLASSIC_CONTROLLERS.md).
+>
+> 本分支增加：无需战网导入任意版本客户端并设置 realmlist；老版本客户端手柄转键鼠，
+> 自动适配 ConsoleExperienceClassic / ShaguController / ConsolePortLK；导入客户端的插件安装。
+
 > **Alpha build:** WeHavePhones is still in development. Expect bugs, rough edges, and compatibility differences between phones. Report problems through Diagnostics in the app.
 
 [![WeHavePhones demo video](website/assets/gameplay-60s.jpg)](https://www.youtube.com/watch?v=4wet8as_QfA)
