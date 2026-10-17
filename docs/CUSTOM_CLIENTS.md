@@ -5,9 +5,10 @@ that starts without Battle.net, for example a 3.3.5a client for a server you
 choose with its realmlist. Play starts the client's own executable directly:
 there is no Battle.net sign-in, update check or install.
 
-Only the official ARM64 Battle.net clients have been tested on a phone. A
-32-bit x86 client runs through the same Wine/FEX runtime as Battle.net
-(WOW64 emulation, Direct3D 9 through DXVK); how well it runs is untested.
+**Tested:** a 1.12.1 (vanilla) client runs at a steady 60 FPS on a vivo X100
+Ultra (Snapdragon 8 Gen 3). Other versions (2.4.3, 3.3.5a, 4.x and later) use
+the same path but are untested. A 32-bit x86 client runs through the same
+Wine/FEX runtime as Battle.net (WOW64 emulation, Direct3D through DXVK).
 
 ## 1. Set up without Battle.net
 

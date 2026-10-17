@@ -5,7 +5,8 @@ re-releases. A client from 1.x to 8.x, imported without Battle.net (see
 [Clients without Battle.net](CUSTOM_CLIENTS.md)), cannot. For those clients
 WeHavePhones plays the controller, and the on-screen gamepad, as keyboard and
 mouse. The keys match the controller add-on the client has, so the add-on
-works without remapping:
+works without remapping. Only 1.12.1 has been tested; the other rows follow
+each add-on's documented keys but are untested:
 
 | Client | Controller add-on | Layout picked by Automatic |
 | --- | --- | --- |
