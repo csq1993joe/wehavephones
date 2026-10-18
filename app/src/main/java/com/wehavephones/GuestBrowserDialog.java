@@ -44,15 +44,16 @@ import java.util.Locale;
  * itself shortly after that callback has loaded.
  */
 public final class GuestBrowserDialog extends Dialog {
-    private static final long CLOSE_AFTER_CALLBACK_MS = 2000;
+    /** Time for Battle.net to answer the callback request before the panel closes. */
+    private static final long CLOSE_AFTER_CALLBACK_MS = 2500;
 
     private final Activity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WebView webView;
     private ProgressBar progress;
     private String currentUrl;
-    private volatile boolean callbackReached;
     private boolean closeScheduled;
+    private Runnable onClosed;
 
     private GuestBrowserDialog(Activity activity) {
         super(activity, android.R.style.Theme_DeviceDefault_NoActionBar);
@@ -72,9 +73,14 @@ public final class GuestBrowserDialog extends Dialog {
         return dialog;
     }
 
+    /** Runs after the panel closes, however it was closed. */
+    public void setOnClosed(Runnable onClosed) {
+        this.onClosed = onClosed;
+    }
+
     public void load(String url) {
         currentUrl = url;
-        callbackReached = false;
+        handler.removeCallbacksAndMessages(null);
         closeScheduled = false;
         webView.loadUrl(url);
         if (!isShowing() && !activity.isFinishing()) show();
@@ -140,7 +146,7 @@ public final class GuestBrowserDialog extends Dialog {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase(Locale.ROOT) : "";
                 if (scheme.equals("http") || scheme.equals("https")) {
-                    if (isCallback(uri)) callbackReached = true;
+                    if (isCallback(uri)) scheduleClose();
                     return false;
                 }
                 openAppLink(uri.toString());
@@ -149,8 +155,9 @@ public final class GuestBrowserDialog extends Dialog {
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                // Server redirects to the callback do not always pass shouldOverrideUrlLoading.
-                if (request.isForMainFrame() && isCallback(request.getUrl())) callbackReached = true;
+                // Any request to the callback counts: a redirect, a frame, or the
+                // success page calling it with a script. Runs on a WebView thread.
+                if (isCallback(request.getUrl())) handler.post(GuestBrowserDialog.this::scheduleClose);
                 return null;
             }
 
@@ -162,16 +169,7 @@ public final class GuestBrowserDialog extends Dialog {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
-                if (url != null) currentUrl = url;
-                if (callbackReached && !closeScheduled) {
-                    closeScheduled = true;
-                    handler.postDelayed(() -> {
-                        if (isShowing()) {
-                            dismiss();
-                            AppUtils.showToast(activity, R.string.guest_browser_signed_in);
-                        }
-                    }, CLOSE_AFTER_CALLBACK_MS);
-                }
+                if (url != null && !url.startsWith("about:")) currentUrl = url;
             }
         });
 
@@ -179,7 +177,19 @@ public final class GuestBrowserDialog extends Dialog {
             handler.removeCallbacksAndMessages(null);
             webView.stopLoading();
             webView.loadUrl("about:blank");
+            if (onClosed != null) onClosed.run();
         });
+    }
+
+    private void scheduleClose() {
+        if (closeScheduled || !isShowing()) return;
+        closeScheduled = true;
+        handler.postDelayed(() -> {
+            if (isShowing()) {
+                dismiss();
+                AppUtils.showToast(activity, R.string.guest_browser_signed_in);
+            }
+        }, CLOSE_AFTER_CALLBACK_MS);
     }
 
     @Override
