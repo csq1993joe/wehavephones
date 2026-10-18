@@ -2063,7 +2063,10 @@ import java.util.concurrent.Executors;
             lastGuestUrlAt = now;
             if (isFinishing() || isDestroyed()) return;
             // In-app panel first: the phone's browser would send the session to the background.
-            if (guestBrowser == null) guestBrowser = GuestBrowserDialog.create(this);
+            if (guestBrowser == null) {
+                guestBrowser = GuestBrowserDialog.create(this);
+                if (guestBrowser != null) guestBrowser.setOnClosed(this::refocusAfterGuestBrowser);
+            }
             if (guestBrowser != null) {
                 guestBrowser.load(url);
                 return;
@@ -2078,6 +2081,17 @@ import java.util.concurrent.Executors;
                 AppUtils.showToast(this, R.string.guest_url_no_browser);
             }
         });
+    }
+
+    /**
+     * The app that opened the link (Battle.net) waits for its window to be
+     * activated again, as on a PC when you switch back from the browser; until
+     * then Battle.net China keeps its sign-in overlay over the page.
+     */
+    private void refocusAfterGuestBrowser() {
+        if (winHandler == null) return;
+        xServerView.requestFocus();
+        winHandler.bringToFront("Battle.net.exe");
     }
 
     private void applyRootfsUtilsPatches() {
