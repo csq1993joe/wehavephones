@@ -141,6 +141,7 @@ import java.util.concurrent.Executors;
     private static final String OPEN_URL_COMMAND = "\"C:\\windows\\openurl.exe\" \"%1\"";
     private String lastGuestUrl;
     private long lastGuestUrlAt;
+    private GuestBrowserDialog guestBrowser;
     // Bump when changing assets extracted by applyGeneralPatches() (e.g. imagefs_patches.tzst contents)
     // so existing containers re-apply patches without requiring appVersion/imgVersion changes.
     private static final int GENERAL_PATCH_VERSION = 6;
@@ -413,6 +414,10 @@ import java.util.concurrent.Executors;
 
     @Override
     protected void onDestroy() {
+        if (guestBrowser != null) {
+            guestBrowser.dismiss();
+            guestBrowser = null;
+        }
         SessionInputExtras.onSessionDestroyed(this);
         if (activeInstance.get() == this) activeInstance = NO_ACTIVE_INSTANCE;
         shutdownRuntimeOnce();
@@ -2046,13 +2051,23 @@ import java.util.concurrent.Executors;
         }
     }
 
-    /** A link that the container opened through openurl.exe; called on WinHandler's thread. */
+    /**
+     * A link that the container opened through openurl.exe; called on WinHandler's thread.
+     * It opens in {@link GuestBrowserDialog}, or the phone's browser without a WebView.
+     */
     public void openGuestUrl(String url) {
         runOnUiThread(() -> {
             long now = SystemClock.elapsedRealtime();
             if (url.equals(lastGuestUrl) && now - lastGuestUrlAt < 3000) return;
             lastGuestUrl = url;
             lastGuestUrlAt = now;
+            if (isFinishing() || isDestroyed()) return;
+            // In-app panel first: the phone's browser would send the session to the background.
+            if (guestBrowser == null) guestBrowser = GuestBrowserDialog.create(this);
+            if (guestBrowser != null) {
+                guestBrowser.load(url);
+                return;
+            }
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             intent.addCategory(Intent.CATEGORY_BROWSABLE);
             try {
